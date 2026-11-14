@@ -11,6 +11,7 @@ compared with another*, without making up data that doesn't exist.
 | CALCULATED | `C` | Deterministic derivation from measured data, with a stated resolution | distance, longitudinal accel, brake-onset point, min corner speed, full-throttle %, coasting distance |
 | ESTIMATED | `E` | Output of a statistical model, shown with an uncertainty interval | degradation rate (s/lap), fuel-corrected pace, tyre-age effect |
 | INTERPRETATION | `I` | A hypothesis the data is *consistent with*. Never shown as fact | "pattern consistent with tyre management" |
+| ASSUMPTION | `A` | An unverified input chosen by the analyst, not derived from data | fuel-burn s/lap, tyre age inferred from pit stops (2019–22) |
 
 Forbidden: presenting anything as tyre wear, grip remaining, tyre temperature or "% tyre life".
 

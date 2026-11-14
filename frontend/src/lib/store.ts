@@ -2,6 +2,7 @@ import { create } from "zustand";
 import type { CompareMode } from "./api";
 
 export type ColorBy = "driver" | "speed" | "inputs" | "faster";
+export type Tab = "compare" | "overlay" | "degradation";
 
 export type ModeParams = {
   lap?: number;
@@ -24,6 +25,9 @@ type State = {
   /** Shared distance window [from, to] in metres; null = full lap. */
   xRange: [number, number] | null;
   colorBy: ColorBy;
+  tab: Tab;
+  /** Replay clock: seconds since both laps started; null when not replaying. */
+  playT: number | null;
   setYear: (y: number | null) => void;
   setSession: (id: string | null) => void;
   setDrivers: (a: number | null, b: number | null) => void;
@@ -32,6 +36,8 @@ type State = {
   setCursorS: (s: number | null) => void;
   setXRange: (r: [number, number] | null) => void;
   setColorBy: (c: ColorBy) => void;
+  setTab: (t: Tab) => void;
+  setPlayT: (t: number | null) => void;
 };
 
 export const useStore = create<State>((set) => ({
@@ -44,12 +50,16 @@ export const useStore = create<State>((set) => ({
   cursorS: null,
   xRange: null,
   colorBy: "driver",
+  tab: "compare",
+  playT: null,
   setYear: (year) => set({ year, sessionId: null, driverA: null, driverB: null, params: {}, xRange: null }),
   setSession: (sessionId) => set({ sessionId, driverA: null, driverB: null, params: {}, xRange: null }),
-  setDrivers: (driverA, driverB) => set({ driverA, driverB, params: {} }),
+  setDrivers: (driverA, driverB) => set({ driverA, driverB, params: {}, playT: null }),
   setMode: (mode) => set({ mode }),
   setParams: (p) => set((s) => ({ params: { ...s.params, ...p } })),
   setCursorS: (cursorS) => set({ cursorS }),
   setXRange: (xRange) => set({ xRange }),
   setColorBy: (colorBy) => set({ colorBy }),
+  setTab: (tab) => set({ tab }),
+  setPlayT: (playT) => set({ playT }),
 }));

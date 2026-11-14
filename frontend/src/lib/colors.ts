@@ -24,3 +24,10 @@ export function speedColor(v: number, min: number, max: number): string {
   const t = Math.max(0, Math.min(1, (v - min) / Math.max(1, max - min)));
   return SPEED_RAMP[Math.round(t * (SPEED_RAMP.length - 1))];
 }
+
+// Ordinal ramps for multi-lap overlays: one hue per driver, darker = earlier (lower tyre age), lighter = later.
+// Validated with the dataviz validator (--ordinal --mode dark): monotone L, visible steps, ≥ 3:1 at the dark end.
+export const LAP_RAMP = {
+  a: ["#2a78d6", "#5598e7", "#86b6ef", "#b7d3f6"],
+  b: ["#c94a11", "#e96a3a", "#f69573", "#ffbfa9"],
+} as const;

@@ -62,6 +62,9 @@ def comparability(a: pd.Series, b: pd.Series, is_race: bool) -> list[dict]:
         diffs.append({"kind": "compound", "message": f"Different compounds: {a['compound']} vs {b['compound']}"})
     if pd.notna(a["tyre_age"]) and pd.notna(b["tyre_age"]) and a["tyre_age"] != b["tyre_age"]:
         diffs.append({"kind": "tyre_age", "message": f"Different tyre age: {a['tyre_age']} vs {b['tyre_age']} laps"})
+    if a.get("tyre_age_assumed") or b.get("tyre_age_assumed"):
+        diffs.append({"kind": "tyre_age_assumed",
+                      "message": "Tyre age inferred from pit stops (assumes a new set at each stop); compound unknown"})
     if is_race and a["lap_number"] != b["lap_number"]:
         gap = abs(int(a["lap_number"]) - int(b["lap_number"]))
         diffs.append({"kind": "fuel", "message": f"Different race laps ({gap} apart): fuel load and track state differ"})

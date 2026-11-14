@@ -36,6 +36,20 @@ def _attach_stints(laps: pd.DataFrame, stints: pd.DataFrame) -> pd.DataFrame:
     return laps
 
 
+def _derive_stints_from_pits(laps: pd.DataFrame) -> pd.DataFrame:
+    """Sources without stint data (Jolpica): stint = 1 + pit stops completed before this lap.
+
+    Tyre age then ASSUMES a new set at the start and at every stop (`tyre_age_assumed`); compound stays unknown.
+    """
+    laps = laps.sort_values(["driver_number", "lap_number"]).copy()
+    prior_stops = laps.groupby("driver_number")["is_pit_in"].transform(lambda s: s.astype(int).shift(1, fill_value=0).cumsum())
+    laps["stint"] = (prior_stops + 1).astype("Int64")
+    first = laps.groupby(["driver_number", "stint"])["lap_number"].transform("min")
+    laps["tyre_age"] = (laps["lap_number"] - first).astype("Int64")
+    laps["tyre_age_assumed"] = True
+    return laps
+
+
 def _lap_windows(laps: pd.DataFrame) -> pd.Series:
     """Lap end time: start + duration, falling back to the next lap's start for laps without a time."""
     nxt = laps.groupby("driver_number")["lap_start"].shift(-1)
@@ -83,6 +97,9 @@ def build_lap_table(src: SessionSource, s: SessionRef) -> pd.DataFrame:
         pit_in |= set(zip(stints.loc[nxt.notna(), "driver_number"], stints.loc[nxt.notna(), "lap_end"].astype(int)))
     laps["is_pit_in"] = laps["is_pit_in"].to_numpy(dtype=bool) | np.array(
         [(d, n) in pit_in for d, n in zip(laps["driver_number"], laps["lap_number"])], dtype=bool)
+    laps["tyre_age_assumed"] = False
+    if stints.empty and laps["is_pit_in"].any():
+        laps = _derive_stints_from_pits(laps).reset_index(drop=True)
 
     laps["lap_end"] = _lap_windows(laps)
     for col in ("sc", "vsc", "red", "yellow", "deleted"):

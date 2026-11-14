@@ -80,6 +80,7 @@ export type Lap = {
   clean: boolean;
   exclude_reasons: string[];
   flags: string[];
+  tyre_age_assumed: boolean;
 };
 
 export type CompareMode = "fastest" | "same_lap" | "same_tyre_age" | "custom";
@@ -113,11 +114,49 @@ export type Track = {
     y: number[];
   };
   corners: Corner[];
+  zones: Zone[];
   rotation: number;
   pit_loss_s: number | null;
   units_per_m: number;
   notes: string[];
 };
+
+export type Zone = {
+  id: number;
+  label: string;
+  corners: string[];
+  kind: "braking" | "flat";
+  start_s: number;
+  apex_s: number;
+  end_s: number;
+};
+
+export type Tier = "M" | "C" | "E" | "I" | "A";
+export type MetricDef = { unit: string; tier: Tier; note: string };
+export type ZoneMetrics = { zone_id: number } & Partial<Record<string, number | null>>;
+export type CornerResult = {
+  driver_number: number;
+  lap_number: number;
+  metrics: ZoneMetrics[];
+  definitions: Record<string, MetricDef>;
+};
+
+export type Fit = { slope: number; ci_low: number; ci_high: number; intercept: number; residual_sd: number; n: number };
+export type StintTrend = {
+  driver_number: number;
+  stint: number;
+  compound: string | null;
+  lap_start: number;
+  lap_end: number;
+  tyre_age_start: number | null;
+  tyre_age_assumed: boolean;
+  n_laps: number;
+  n_used: number;
+  raw_trend: Fit | null;
+  fuel_corrected_trend: Fit | null;
+  sector_trends: Partial<Record<"s1_s" | "s2_s" | "s3_s", Fit | null>>;
+};
+export type Degradation = { ci_level: number; fuel_s_per_lap: number; stints: StintTrend[]; laps: Lap[] };
 
 type Num = number | null;
 
@@ -179,6 +218,13 @@ export const api = {
   track: (id: string) => get<Track>(`/api/sessions/${id}/track`),
   trace: (id: string, driver: number, lap: number) =>
     get<Trace>(`/api/sessions/${id}/trace`, { driver, lap, raw: "false" }),
+  corners: (id: string, driver: number, lap: number) => get<CornerResult>(`/api/sessions/${id}/corners`, { driver, lap }),
+  degradation: (id: string, drivers: number[], includeFlagged: boolean, fuel: number) =>
+    get<Degradation>(`/api/sessions/${id}/degradation`, {
+      drivers: drivers.join(","),
+      include_flagged: String(includeFlagged),
+      fuel_s_per_lap: fuel,
+    }),
   compare: (id: string, params: Record<string, string | number | undefined | null>) =>
     get<CompareResult>(`/api/sessions/${id}/compare`, params),
 };

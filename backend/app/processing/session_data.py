@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 from scipy.signal import find_peaks
 
+from app.analysis.corners import Zone, build_zones, zone_metrics
 from app.config import POSITION_UNITS_PER_M, TRACE_GRID_M
 from app.processing.laps import build_lap_table
 from app.processing.reference import ReferenceLine, build_reference, project
@@ -85,9 +86,11 @@ def track(session_id: str) -> dict:
     if not corners:
         corners = _speed_minima_corners(session_id, ref, meta)
     corners.sort(key=lambda c: c["s"])
+    ref_trace = trace(session_id, meta["driver_number"], meta["lap_number"])
     return {
         "reference": {**meta, **ref.downsample(TRACE_GRID_M)},
         "corners": corners,
+        "zones": [z.to_dict() for z in build_zones(ref_trace, corners)],
         "rotation": (info or {}).get("rotation", 0),
         "pit_loss_s": (info or {}).get("pit_loss"),
         "units_per_m": POSITION_UNITS_PER_M,
@@ -109,3 +112,13 @@ def trace(session_id: str, driver: int, lap: int, include_raw: bool = True) -> d
     out["lap_number"] = lap
     out["lap_time_s"] = None if pd.isna(row["lap_time_s"]) else float(row["lap_time_s"])
     return out
+
+
+def zones(session_id: str) -> list[Zone]:
+    return [Zone(**z) for z in track(session_id)["zones"]]
+
+
+@lru_cache(maxsize=512)
+def corner_metrics(session_id: str, driver: int, lap: int) -> list[dict]:
+    tr = trace(session_id, driver, lap, True)
+    return [zone_metrics(tr, z) for z in zones(session_id)]

@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Corner, Track, Trace } from "@/lib/api";
 import { DRIVER, INPUTS, SPEED_RAMP, speedColor } from "@/lib/colors";
 import { useStore, type ColorBy } from "@/lib/store";
-import { deltaTime, gridIndex } from "@/lib/trace";
+import { deltaTime, gridIndex, sAtTime } from "@/lib/trace";
 import { Badge } from "./Badge";
 
 const OFFSET_PX = 3.5; // visual separation between the two traces (data has no lateral information)
@@ -35,7 +35,7 @@ export function TrackMap({ track, a, b, labels }: { track: Track; a?: Trace; b?:
   const transformRef = useRef<ZoomTransform>(zoomIdentity);
   const zoomRef = useRef<ZoomBehavior<HTMLCanvasElement, unknown> | null>(null);
   const [size, setSize] = useState({ w: 600, h: 520 });
-  const { cursorS, setCursorS, colorBy, setColorBy, setXRange } = useStore();
+  const { cursorS, setCursorS, colorBy, setColorBy, setXRange, xRange, playT } = useStore();
 
   const rot = track.rotation ?? 0;
   const refPts = useMemo(() => track.reference.x.map((x, i) => rotate(x, track.reference.y[i], rot)), [track, rot]);
@@ -163,11 +163,12 @@ export function TrackMap({ track, a, b, labels }: { track: Track; a?: Trace; b?:
       ctx.fillText(`${c.number}${c.letter}`, q[0], q[1]);
     }
 
-    // Cursor markers at the shared distance, each on its own (offset) trace.
-    if (cursorS !== null) {
+    // Markers: during replay each car sits where it was at the same elapsed time (so the gap is visible);
+    // otherwise both sit at the shared cursor distance.
+    if (cursorS !== null || playT !== null) {
       ([[a, ptsA, 1, DRIVER.a], [b, ptsB, -1, DRIVER.b]] as const).forEach(([tr, pts, sign, col]) => {
         if (!tr) return;
-        const i = gridIndex(tr, cursorS);
+        const i = gridIndex(tr, playT !== null ? sAtTime(tr, playT) : (cursorS as number));
         const p = offsetPath(pts.slice(Math.max(0, i - 1), i + 2), sign)[Math.min(1, i)];
         if (!p) return;
         ctx.fillStyle = col;
@@ -179,7 +180,7 @@ export function TrackMap({ track, a, b, labels }: { track: Track; a?: Trace; b?:
         ctx.stroke();
       });
     }
-  }, [a, b, ptsA, ptsB, refPts, toScreen, size, colorBy, delta, speedRange, track.corners, rot, cursorS]);
+  }, [a, b, ptsA, ptsB, refPts, toScreen, size, colorBy, delta, speedRange, track.corners, rot, cursorS, playT]);
 
   const drawRef = useRef(draw);
   useEffect(() => {
@@ -214,27 +215,31 @@ export function TrackMap({ track, a, b, labels }: { track: Track; a?: Trace; b?:
     };
   }, [size]);
 
-  const zoomToCorner = (c: Corner | null) => {
+  // The map follows the shared distance window, whoever sets it (corner buttons, chart drag-zoom, corner table).
+  useEffect(() => {
     const cv = canvasRef.current;
     const z = zoomRef.current;
     if (!cv || !z) return;
-    if (!c) {
+    if (!xRange) {
       select(cv).call(z.transform, zoomIdentity);
-      setXRange(null);
       return;
     }
-    const L = track.reference.length_m;
     const near = track.reference.s
       .map((s, i) => [s, i] as const)
-      .filter(([s]) => Math.abs(((s - c.s + L * 1.5) % L) - L / 2) < CORNER_WINDOW_M)
+      .filter(([s]) => s >= xRange[0] && s <= xRange[1])
       .map(([, i]) => base(refPts[i]));
+    if (near.length < 2) return;
     const xs = near.map((p) => p[0]);
     const ys = near.map((p) => p[1]);
     const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
     const k = Math.min(40, 0.8 * Math.min(size.w / (x1 - x0 || 1), size.h / (y1 - y0 || 1)));
     const t = zoomIdentity.translate(size.w / 2, size.h / 2).scale(k).translate(-(x0 + x1) / 2, -(y0 + y1) / 2);
     select(cv).call(z.transform, t);
-    setXRange([Math.max(0, c.s - CORNER_WINDOW_M), Math.min(L, c.s + CORNER_WINDOW_M)]);
+  }, [xRange, base, refPts, size, track.reference.s]);
+
+  const zoomToCorner = (c: Corner | null) => {
+    const L = track.reference.length_m;
+    setXRange(c ? [Math.max(0, c.s - CORNER_WINDOW_M), Math.min(L, c.s + CORNER_WINDOW_M)] : null);
   };
 
   const onMove = (e: React.MouseEvent) => {

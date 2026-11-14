@@ -5,6 +5,7 @@ const TIERS = {
   C: { label: "Calculated", title: "Deterministic calculation from measured data" },
   E: { label: "Estimated", title: "Statistical model output; carries uncertainty" },
   I: { label: "Interpretation", title: "Hypothesis consistent with the data, not a measurement" },
+  A: { label: "Assumption", title: "Unverified assumption chosen by the analyst, not derived from data" },
 } as const;
 
 export function Badge({ tier, note }: { tier: keyof typeof TIERS; note?: string }) {

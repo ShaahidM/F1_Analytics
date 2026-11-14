@@ -37,7 +37,7 @@ const AXIS = {
   font: "10px ui-monospace, monospace",
 };
 
-function useWidth(ref: React.RefObject<HTMLDivElement | null>) {
+export function useWidth(ref: React.RefObject<HTMLDivElement | null>) {
   const [w, setW] = useState(600);
   useEffect(() => {
     if (!ref.current) return;
@@ -48,9 +48,9 @@ function useWidth(ref: React.RefObject<HTMLDivElement | null>) {
   return w;
 }
 
-function Chart({ data, series, height, width, range, step, syncKey, corners }: {
+export function Chart({ data, series, height, width, range, step, syncKey, corners }: {
   data: uPlot.AlignedData; series: { label: string; color: string }[]; height: number; width: number;
-  range?: [number, number]; step?: boolean; syncKey: string; corners: Track["corners"]; unit: string;
+  range?: [number, number]; step?: boolean; syncKey: string; corners: Track["corners"];
 }) {
   const el = useRef<HTMLDivElement>(null);
   const plot = useRef<uPlot | null>(null);
@@ -204,7 +204,7 @@ export function TelemetryStack({ a, b, track, labels }: { a: Trace; b: Trace; tr
       <ChartBlock title="Δ time (B − A)" unit="s" tier="C" note="Positive = B behind A at that distance. Distance-aligned, from timing-line-anchored traces"
         readouts={[{ label: `${labels.b} vs ${labels.a}`, color: "#c3c2b7", value: ia !== null && delta[ia] !== null ? `${(delta[ia] as number) >= 0 ? "+" : ""}${(delta[ia] as number).toFixed(3)}` : "—" }]}>
         <Chart data={deltaData} series={[{ label: "Δt", color: "#c3c2b7" }]} height={90} width={width}
-          syncKey="telemetry" corners={track.corners} unit="s" />
+          syncKey="telemetry" corners={track.corners} />
       </ChartBlock>
 
       {CHANNELS.map((c, k) => (
@@ -214,7 +214,7 @@ export function TelemetryStack({ a, b, track, labels }: { a: Trace; b: Trace; tr
             { label: labels.b, color: DRIVER.b, value: readout(c, b, ib) },
           ]}>
           <Chart data={datasets[k]} series={series} height={c.height} width={width} range={c.range} step={c.step}
-            syncKey="telemetry" corners={track.corners} unit={c.unit} />
+            syncKey="telemetry" corners={track.corners} />
         </ChartBlock>
       ))}
 
@@ -227,7 +227,7 @@ export function TelemetryStack({ a, b, track, labels }: { a: Trace; b: Trace; tr
   );
 }
 
-function ChartBlock({ title, unit, tier, note, readouts, children }: {
+export function ChartBlock({ title, unit, tier, note, readouts, children }: {
   title: string; unit: string; tier: "M" | "C"; note?: string;
   readouts: { label: string; color: string; value: string }[]; children: React.ReactNode;
 }) {

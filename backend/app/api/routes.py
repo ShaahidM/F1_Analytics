@@ -5,6 +5,8 @@ from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Query
 
+from app.analysis.corners import METRICS
+from app.analysis.degradation import CI_LEVEL, stint_trends
 from app.api.serialize import frame, row, value
 from app.config import FIRST_SUPPORTED_SEASON
 from app.processing import session_data
@@ -17,7 +19,7 @@ router = APIRouter(prefix="/api")
 LAP_FIELDS = [
     "driver_number", "lap_number", "lap_start", "lap_time_s", "s1_s", "s2_s", "s3_s", "i1_speed", "i2_speed",
     "st_speed", "is_pit_out", "is_pit_in", "stint", "compound", "tyre_age", "sc", "vsc", "red", "yellow",
-    "deleted", "min_interval_s", "clean", "exclude_reasons", "flags",
+    "deleted", "min_interval_s", "clean", "exclude_reasons", "flags", "tyre_age_assumed",
 ]
 
 
@@ -114,3 +116,27 @@ def compare(
     pick = lambda r: {k: v for k, v in row(r).items() if k in LAP_FIELDS}  # noqa: E731
     return {"mode": mode, "a": pick(sel["a"]), "b": pick(sel["b"]),
             "differences": sel["differences"], "equivalent": sel["equivalent"]}
+
+
+@router.get("/sessions/{session_id}/corners")
+def corners(session_id: str, driver: int, lap: int):
+    _session(session_id)
+    try:
+        metrics = _guard(lambda: session_data.corner_metrics(session_id, driver, lap))
+    except ValueError as exc:
+        raise HTTPException(422, str(exc))
+    return {"driver_number": driver, "lap_number": lap, "metrics": metrics,
+            "definitions": {k: {"unit": u, "tier": tier, "note": note} for k, (u, tier, note) in METRICS.items()}}
+
+
+@router.get("/sessions/{session_id}/degradation")
+def degradation(session_id: str, drivers: str, include_flagged: bool = False, fuel_s_per_lap: float = 0.0):
+    _session(session_id)
+    df = _guard(lambda: session_data.lap_table(session_id))
+    ids = [int(d) for d in drivers.split(",")]
+    return {
+        "ci_level": CI_LEVEL,
+        "fuel_s_per_lap": fuel_s_per_lap,
+        "stints": stint_trends(df, ids, include_flagged, fuel_s_per_lap),
+        "laps": frame(df[df["driver_number"].isin(ids)], LAP_FIELDS),
+    }

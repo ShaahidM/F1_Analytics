@@ -125,7 +125,9 @@ class JolpicaSource(SessionSource):
             notes=[
                 "Telemetry, racing lines, sector times and tyre compounds are not publicly available for this "
                 "season: F1's timing archive requires an F1 TV subscription since Oct 2026. Source: Jolpica-F1 "
-                "(lap times and pit stops only)."
+                "(lap times and pit stops only).",
+                "No race-control data for this season: safety-car, VSC and red-flag laps cannot be detected and "
+                "are only removed if they fail the lap-time outlier test.",
             ],
         )
 

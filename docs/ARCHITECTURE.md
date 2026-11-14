@@ -66,7 +66,11 @@ Timestamps aren't comparable across laps, so everything is aligned on **track di
 5. **Elapsed time t(s)**: position timestamps jitter ±~0.05 s locally, and integrating speed drifts, so
    t(s) = ∫ds/v + (400 m moving average of [t_pos − ∫ds/v]). Noise std 0.006 s. End-of-lap Δ matches the official
    lap-time difference within ~20 ms (Monza 2024 check). **Delta time**: Δt(s) = t_B(s) − t_A(s).
-6. **Corners**: MultiViewer corner (x,y) projected onto the reference → s_apex. Fallback: local speed minima.
+6. **Corners**: MultiViewer corner (x,y) projected onto the reference → s. Fallback: local speed minima.
+7. **Corner zones** (`analysis/corners.py`): speed minima (prominence ≥ 10 km/h) on the reference lap. A zone runs from
+   the approach speed peak to the exit speed peak, is labelled with the corners inside it (e.g. "T1–T2"), and is
+   **shared by every lap in the session**, so time-in-zone compares identical track. Corners outside any braking zone
+   become "flat" zones (±150/100 m).
 
 ## Data flow / caching
 
