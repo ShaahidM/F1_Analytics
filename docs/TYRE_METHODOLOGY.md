@@ -60,11 +60,14 @@ Model A, per-stint robust fit (descriptive):
 
 Model B, session-wide fixed-effects regression (inferential):
 ```
-lap_time_ij = α_driver(i) + γ·lap_number + Σ_compound β_c·tyre_age·[compound=c] + δ·track_temp + ε
+lap_time_ij = α_driver(i) + κ_compound + γ·lap_number + Σ_compound β_c·tyre_age·[compound=c] + δ·track_temp + ε
 ```
 - Fitted on all clean laps from all drivers in the race (more drivers means better identification of γ).
 - γ captures fuel burn plus track evolution together. They can't be split without external information.
 - β_c is the **estimated tyre-age effect per compound** (s/lap), reported with a CI.
+- κ_compound is the fresh-tyre pace offset per compound (added in Phase 4). It is confounded with race phase when a
+  compound is mostly used early or late, which triggers an automatic warning. Model B predictions at a common
+  reference lap and temperature drive the cross-compound view.
 - A driver-specific slope (β_c + β_c,driver) is the comparison metric between the two drivers.
 - Option: a fuel-correction prior (default ~0.03 s/kg × burn kg/lap, both **ASSUMPTIONS**, editable, shown as sliders)
   for Model A only, so the user can see how sensitive the result is to the assumption.

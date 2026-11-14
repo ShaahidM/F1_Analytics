@@ -11,6 +11,7 @@ from scipy.signal import find_peaks
 from app.analysis.corners import Zone, build_zones, zone_metrics
 from app.analysis.degradation import _fit
 from app.analysis.preservation import corner_rows, stint_zone_trends
+from app.analysis.strategy import crossing_times, pit_cycles, pit_stops, positions, stints_table
 from app.analysis.style import STYLE_METRICS, lap_style
 from app.config import POSITION_UNITS_PER_M, TRACE_GRID_M
 from app.processing.laps import build_lap_table
@@ -181,4 +182,38 @@ def preservation(session_id: str, driver: int, include_flagged: bool) -> dict:
         "zone_trends": stint_zone_trends(rows, braking),
         "lap_trends": lap_trends,
         "rows": rows[[c for c in keep if c in rows]] if not rows.empty else rows,
+    }
+
+
+@lru_cache(maxsize=32)
+def strategy(session_id: str, a: int, b: int) -> dict:
+    s = get_session(session_id)
+    src = source_for_session(session_id)
+    if not s.is_race:
+        raise DataUnavailable("strategy analysis (races and sprints only)")
+    laps = lap_table(session_id)
+    try:
+        pits = src.pits(s)
+    except DataUnavailable:
+        pits = pd.DataFrame(columns=["driver_number", "lap_number", "lane_duration_s", "stop_duration_s"])
+    cross = crossing_times(laps)
+    pos = positions(cross)
+    last = pos.sort_values("lap_number").groupby("driver_number").tail(1)
+    order = last.sort_values(["lap_number", "t"], ascending=[False, True])["driver_number"].astype(int).tolist()
+    stops = {d: pit_stops(laps, pits, d) for d in (a, b)}
+    ta = cross[cross["driver_number"] == a].set_index("lap_number")["t"]
+    tb = cross[cross["driver_number"] == b].set_index("lap_number")["t"]
+    common = ta.index.intersection(tb.index)
+    info = multiviewer.circuit_info(s.circuit_key, s.year) if s.circuit_key is not None else None
+    return {
+        "order": order,
+        "total_laps": int(laps["lap_number"].max()),
+        "stints": stints_table(laps),
+        "pit_stops": {str(d): v for d, v in stops.items()},
+        "pit_loss_reference": (info or {}).get("pit_loss"),
+        "gap": [{"lap": int(n), "gap_s": round(float(tb[n] - ta[n]), 3)} for n in sorted(common)],
+        "positions": {str(d): [{"lap": int(r.lap_number), "position": int(r.position)}
+                               for r in pos[pos["driver_number"] == d].sort_values("lap_number").itertuples()] for d in (a, b)},
+        "cycles": pit_cycles(cross, stops, laps, a, b),
+        "timing_basis": "line-crossing timestamps" if laps["lap_end"].notna().any() else "cumulative lap times",
     }

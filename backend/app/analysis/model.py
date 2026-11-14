@@ -1,6 +1,6 @@
 """Model B — session-wide fixed-effects regression (docs/TYRE_METHODOLOGY.md §4).
 
-    lap_time = α_driver + γ·lap_number + Σ_c β_c·tyre_age·[compound=c]
+    lap_time = α_driver + κ_compound + γ·lap_number + Σ_c β_c·tyre_age·[compound=c]
                + Σ_c δ_{c,A}·tyre_age·[compound=c, driver=A] + (same for B) + θ·track_temp + ε
 
 Within one stint tyre age and lap number rise together, so γ (fuel burn + track evolution, combined) is
@@ -17,11 +17,13 @@ import statsmodels.formula.api as smf
 
 CI_LEVEL = 0.90
 MIN_LAPS = 30
+PHASE_SPREAD = 0.3  # warn when compounds' median laps differ by > 30% of race distance
 
 ASSUMPTIONS = [
     "Fuel-burn and track-evolution effect (γ) is linear in lap number and identical for every driver",
     "Tyre-age effect is linear within a compound",
     "Driver differences in pace are constant offsets except for the two selected drivers' tyre slopes",
+    "Each compound has one fresh-tyre pace offset shared by all drivers",
     "Clean-lap filter removes SC/VSC/red, pit laps, lap 1, deleted laps and outliers; residual traffic effects remain",
 ]
 
@@ -69,6 +71,8 @@ def fit_session_model(laps: pd.DataFrame, a: int, b: int, include_flagged: bool,
     compounds = [c for c, g in df.groupby("compound") if g["tyre_age"].nunique() >= 4]
     df = df[df["compound"].isin(compounds)]
     terms = ["C(driver)", "lap_number"]
+    if len(compounds) > 1:
+        terms.append(f"C(compound, Treatment('{compounds[0]}'))")  # fresh-tyre pace offset per compound
     terms += [f"I(tyre_age * (compound == '{c}'))" for c in compounds]
     driver_terms = {}
     for tag in ("A", "B"):
@@ -97,7 +101,38 @@ def fit_session_model(laps: pd.DataFrame, a: int, b: int, include_flagged: bool,
                 est, lo, hi = _combo(res, [base, driver_terms[(tag, c)]])
                 per_driver[tag]["compounds"][c] = {"estimate": round(est, 4), "ci_low": round(lo, 4), "ci_high": round(hi, 4),
                                                    "n_laps": int(((df[f"is{tag}"] == 1) & (df["compound"] == c)).sum())}
+    offsets = {compounds[0]: {"estimate": 0.0, "ci_low": 0.0, "ci_high": 0.0}}
+    for c in compounds[1:]:
+        offsets[c] = coef(f"C(compound, Treatment('{compounds[0]}'))[T.{c}]")
+
+    # Predicted pace vs tyre age per driver × compound at a common reference lap and temperature, so compounds
+    # can be compared at equal fuel and conditions (the cross-compound view).
+    ref_lap = float(df["lap_number"].median())
+    ref_temp = float(df["track_temp"].median()) if use_temp else None
+    curves = []
+    for tag, drv in (("A", a), ("B", b)):
+        for c in compounds:
+            seen = df[(df["compound"] == c)]["tyre_age"]
+            ages = np.arange(0, int(seen.max()) + 1)
+            grid = pd.DataFrame({"driver": str(drv), "compound": c, "tyre_age": ages.astype(float), "lap_number": ref_lap,
+                                 "isA": 1.0 if tag == "A" else 0.0, "isB": 1.0 if tag == "B" else 0.0})
+            if use_temp:
+                grid["track_temp"] = ref_temp
+            if str(drv) not in set(df["driver"]):
+                continue
+            pred = res.get_prediction(grid).summary_frame(alpha=1 - CI_LEVEL)
+            own = df[(df["driver_number"] == drv) & (df["compound"] == c)]["tyre_age"]
+            curves.append({"tag": tag, "driver_number": drv, "compound": c, "tyre_age": ages.tolist(),
+                           "lap_time": pred["mean"].round(3).tolist(), "ci_low": pred["mean_ci_lower"].round(3).tolist(),
+                           "ci_high": pred["mean_ci_upper"].round(3).tolist(),
+                           "driver_used_ages": [int(own.min()), int(own.max())] if len(own) else None})
+
     warnings = []
+    phase = df.groupby("compound")["lap_number"].median()
+    if len(phase) > 1 and phase.max() - phase.min() > PHASE_SPREAD * df["lap_number"].max():
+        early, late = phase.idxmin(), phase.idxmax()
+        warnings.append(f"{early} was mostly run early (median lap {phase[early]:.0f}) and {late} late (median lap "
+                        f"{phase[late]:.0f}): compound offsets are partly confounded with any non-linear fuel/track effect")
     if res.condition_number > 1e5:
         warnings.append("High collinearity (condition number %.0e): estimates may be unstable" % res.condition_number)
     stints_per_driver = laps[laps["driver_number"].isin([a, b])].groupby("driver_number")["stint"].nunique()
@@ -116,6 +151,9 @@ def fit_session_model(laps: pd.DataFrame, a: int, b: int, include_flagged: bool,
         "lap_effect": coef("lap_number"),
         "track_temp_effect": coef("track_temp") if use_temp else None,
         "field_tyre_slopes": field,
+        "compound_offsets": offsets,
+        "reference": {"compound": compounds[0], "lap_number": ref_lap, "track_temp": ref_temp},
+        "pace_curves": curves,
         "driver_tyre_slopes": per_driver,
         "warnings": warnings,
         "assumptions": ASSUMPTIONS,

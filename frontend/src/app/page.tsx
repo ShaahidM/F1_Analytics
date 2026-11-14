@@ -8,6 +8,7 @@ import { LapOverlay } from "@/components/LapOverlay";
 import { PreservationView } from "@/components/PreservationView";
 import { ReplayControls } from "@/components/ReplayControls";
 import { SelectionBar } from "@/components/SelectionBar";
+import { StrategyView } from "@/components/StrategyView";
 import { StyleView } from "@/components/StyleView";
 import { TelemetryStack } from "@/components/TelemetryStack";
 import { TrackMap } from "@/components/TrackMap";
@@ -20,6 +21,7 @@ const TABS: { id: Tab; label: string; needsTelemetry: boolean }[] = [
   { id: "degradation", label: "Tyre degradation", needsTelemetry: false },
   { id: "style", label: "Driving style", needsTelemetry: true },
   { id: "preservation", label: "Pace vs preservation", needsTelemetry: true },
+  { id: "strategy", label: "Strategy", needsTelemetry: false },
 ];
 
 export default function Home() {
@@ -27,7 +29,7 @@ export default function Home() {
   const session = useQuery({ queryKey: ["session", sessionId], queryFn: () => api.session(sessionId!), enabled: !!sessionId });
   const caps = session.data?.capabilities;
   const hasTelemetry = !!caps?.telemetry && !!caps?.position;
-  const activeTab: Tab = !hasTelemetry && caps ? "degradation" : tab;
+  const activeTab: Tab = !hasTelemetry && caps && TABS.find((t) => t.id === tab)?.needsTelemetry ? "degradation" : tab;
 
   const track = useQuery({
     queryKey: ["track", sessionId],
@@ -132,6 +134,12 @@ export default function Home() {
       {sessionId && bothDrivers && activeTab === "preservation" && (
         <div className="p-4">
           <PreservationView sessionId={sessionId} slots={slots} />
+        </div>
+      )}
+
+      {sessionId && bothDrivers && activeTab === "strategy" && (
+        <div className="p-4">
+          <StrategyView sessionId={sessionId} slots={slots} drivers={session.data?.drivers ?? []} />
         </div>
       )}
 

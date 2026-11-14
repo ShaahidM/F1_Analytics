@@ -192,3 +192,10 @@ def session_model(session_id: str, drivers: str, include_flagged: bool = True):
     except DataUnavailable:
         weather = None
     return fit_session_model(laps_df, a, b, include_flagged, weather)
+
+
+@router.get("/sessions/{session_id}/strategy")
+def strategy(session_id: str, drivers: str):
+    _session(session_id)
+    a, b = _two_drivers(drivers)
+    return _guard(lambda: session_data.strategy(session_id, a, b))

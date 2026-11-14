@@ -15,6 +15,14 @@ log = logging.getLogger(__name__)
 HEADERS = {"User-Agent": "FastF1/3.9"}
 
 
+def _is_number(v) -> bool:
+    try:
+        float(v)
+        return True
+    except (TypeError, ValueError):
+        return False
+
+
 def circuit_info(circuit_key: int, year: int) -> dict | None:
     try:
         data = http.get_json(f"{MULTIVIEWER_BASE}/circuits/{circuit_key}/{year}", headers=HEADERS)
@@ -37,7 +45,8 @@ def circuit_info(circuit_key: int, year: int) -> dict | None:
     return {
         "corners": corners,
         "rotation": data.get("rotation", 0),
-        "pit_loss": data.get("pitLoss"),
+        # {"normal": s, "sc": s, "vsc": s}: MultiViewer's own estimates of total time lost to a stop.
+        "pit_loss": {k: float(v) for k, v in (data.get("pitLoss") or {}).items() if _is_number(v)} or None,
         "layout_year": data.get("year"),
         "outline_x": data.get("x", []),
         "outline_y": data.get("y", []),

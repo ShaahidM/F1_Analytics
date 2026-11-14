@@ -211,10 +211,62 @@ export type ModelB =
       lap_effect: Coef;
       track_temp_effect: Coef | null;
       field_tyre_slopes: Record<string, Coef>;
+      compound_offsets: Record<string, Coef>;
+      reference: { compound: string; lap_number: number; track_temp: number | null };
+      pace_curves: {
+        tag: "A" | "B";
+        driver_number: number;
+        compound: string;
+        tyre_age: number[];
+        lap_time: number[];
+        ci_low: number[];
+        ci_high: number[];
+        driver_used_ages: [number, number] | null;
+      }[];
       driver_tyre_slopes: Record<"A" | "B", { driver_number: number; compounds: Record<string, Coef & { n_laps: number }> }>;
       warnings: string[];
       assumptions: string[];
     };
+
+export type PitStop = {
+  lap: number;
+  from_compound: string | null;
+  to_compound: string | null;
+  from_tyre_age: number | null;
+  lane_s: number | null;
+  stationary_s: number | null;
+  in_lap_s: number | null;
+  out_lap_s: number | null;
+  baseline_lap_s: number | null;
+  estimated_loss_s: number | null;
+  under_neutralisation: boolean;
+};
+export type PitCycle = {
+  first_stopper: number;
+  second_stopper: number;
+  first_lap: number;
+  second_lap: number;
+  gap_before_s: number | null;
+  gap_after_s: number | null;
+  net_change_s: number | null;
+  lane_time_diff_s: number | null;
+  on_track_diff_s: number | null;
+  compounds: { first_to: string | null; second_from: string | null; second_to: string | null };
+  neutralised: boolean;
+  outcome: string;
+};
+export type Strategy = {
+  order: number[];
+  total_laps: number;
+  stints: { driver_number: number; stint: number; compound: string | null; lap_start: number; lap_end: number;
+    tyre_age_start: number | null; tyre_age_assumed: boolean }[];
+  pit_stops: Record<string, PitStop[]>;
+  pit_loss_reference: Record<string, number> | null;
+  gap: { lap: number; gap_s: number }[];
+  positions: Record<string, { lap: number; position: number }[]>;
+  cycles: PitCycle[];
+  timing_basis: string;
+};
 
 type Num = number | null;
 
@@ -289,6 +341,7 @@ export const api = {
     get<PreservationResult>(`/api/sessions/${id}/preservation`, { drivers: drivers.join(","), include_flagged: String(includeFlagged) }),
   model: (id: string, drivers: number[], includeFlagged: boolean) =>
     get<ModelB>(`/api/sessions/${id}/model`, { drivers: drivers.join(","), include_flagged: String(includeFlagged) }),
+  strategy: (id: string, drivers: number[]) => get<Strategy>(`/api/sessions/${id}/strategy`, { drivers: drivers.join(",") }),
   compare: (id: string, params: Record<string, string | number | undefined | null>) =>
     get<CompareResult>(`/api/sessions/${id}/compare`, params),
 };
