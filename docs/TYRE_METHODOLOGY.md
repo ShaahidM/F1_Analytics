@@ -90,14 +90,25 @@ The *change with tyre age* and the *difference between drivers at equal tyre age
 | P8 | ~~Line offset~~ **NOT FEASIBLE** | positions are map-matched, so lateral offset is ≈0 by construction | — | — |
 | P9 | Sector-time drift vs tyre age | per-sector Model A slope | where the time loss concentrates | as Model A |
 
-**The key interpretation rule: voluntary vs forced slowdown.**
-Wear *forces* lower minimum speeds (less grip). Management *chooses* earlier braking or lifts, with the same or lower
-deceleration. Telemetry can't tell grip from intent directly, so the platform shows patterns:
-- *Pattern consistent with management*: braking earlier (P1↑) **and** deceleration not higher (P2 ≤), coasting up (P6↑),
-  with no rise in sector-time variance.
-- *Pattern consistent with grip loss*: min speed ↓ (P3) with brake onset unchanged, more time lost in traction zones,
-  more lap-to-lap scatter.
-- Anything else is "ambiguous". These labels are tier I and show their supporting numbers and confounders.
+**The key interpretation rule: voluntary vs forced slowdown** (implemented in `analysis/preservation.py::classify`).
+Wear *forces* lower corner speeds (less grip). Management is a *choice* to lift, coast or feed the throttle in
+while corner speed holds. **Braking earlier on its own is ambiguous**: it also happens when grip is lost (the
+original draft of this rule got that wrong), so it only counts alongside maintained minimum and exit speed.
+
+A trend "counts" only when its 90% CI excludes zero **and** the change across the stint's tyre-age span reaches a
+practical threshold (`MIN_CHANGE`, roughly the measurement resolution: brake point 10 m, speeds 2–3 km/h, coasting
+and throttle distances 10 m, decel 0.15 g, zone time 0.05 s). This limits false positives from testing ~7 zones ×
+9 indicators per stint.
+
+- *Consistent with management*: coasting ↑; or throttle ramp ↑ with min/exit speed not ↓; or brake point earlier
+  with min/exit speed not ↓.
+- *Consistent with grip loss*: min speed ↓ without extra coasting; or exit speed ↓ without a more progressive throttle.
+- Both, giving *mixed*; neither, giving *no clear pattern*; fewer than 3 fitted indicators, giving *insufficient data*.
+- These labels are tier I. The UI shows the supporting trends and the confounders: fuel burn (a lighter car brakes
+  later and carries more speed, masking grip loss), track evolution, traffic, brake temperature, ERS strategy.
+
+**Model B check (2024 Monza, 901 clean laps, 20 drivers):** the fitted lap effect γ = −0.056 s/lap [−0.062, −0.050]
+agrees with the typical published fuel-burn estimate (~0.05–0.06 s/lap). Field tyre slopes: HARD +0.046, MEDIUM +0.061 s/lap.
 
 ## 6. Baselines for "pace sacrificed"
 

@@ -8,6 +8,7 @@ import { DRIVER } from "@/lib/colors";
 import { fmtLap } from "@/lib/trace";
 import { Badge } from "./Badge";
 import { CompoundChip } from "./ComparisonPanel";
+import { ModelBPanel } from "./ModelBPanel";
 import { Plot } from "./Plot";
 
 // Compound is a secondary encoding (marker shape); colour always means driver.
@@ -139,6 +140,8 @@ export function DegradationView({ sessionId, slots }: { sessionId: string; slots
       )}
 
       <StintTable stints={q.data.stints} slots={slots} fuel={fuel} />
+
+      <ModelBPanel sessionId={sessionId} slots={slots} includeFlagged={includeFlagged} />
     </div>
   );
 }

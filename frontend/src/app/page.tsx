@@ -5,8 +5,10 @@ import { ComparisonPanel, useComparison } from "@/components/ComparisonPanel";
 import { CornerTable } from "@/components/CornerTable";
 import { DegradationView } from "@/components/DegradationView";
 import { LapOverlay } from "@/components/LapOverlay";
+import { PreservationView } from "@/components/PreservationView";
 import { ReplayControls } from "@/components/ReplayControls";
 import { SelectionBar } from "@/components/SelectionBar";
+import { StyleView } from "@/components/StyleView";
 import { TelemetryStack } from "@/components/TelemetryStack";
 import { TrackMap } from "@/components/TrackMap";
 import { api } from "@/lib/api";
@@ -16,6 +18,8 @@ const TABS: { id: Tab; label: string; needsTelemetry: boolean }[] = [
   { id: "compare", label: "Lap comparison", needsTelemetry: true },
   { id: "overlay", label: "Lap overlay", needsTelemetry: true },
   { id: "degradation", label: "Tyre degradation", needsTelemetry: false },
+  { id: "style", label: "Driving style", needsTelemetry: true },
+  { id: "preservation", label: "Pace vs preservation", needsTelemetry: true },
 ];
 
 export default function Home() {
@@ -116,6 +120,18 @@ export default function Home() {
           ) : (
             <Status text="Building reference line…" />
           )}
+        </div>
+      )}
+
+      {sessionId && bothDrivers && activeTab === "style" && (
+        <div className="p-4">
+          <StyleView sessionId={sessionId} slots={slots} />
+        </div>
+      )}
+
+      {sessionId && bothDrivers && activeTab === "preservation" && (
+        <div className="p-4">
+          <PreservationView sessionId={sessionId} slots={slots} />
         </div>
       )}
 

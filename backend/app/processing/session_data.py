@@ -9,6 +9,9 @@ import pandas as pd
 from scipy.signal import find_peaks
 
 from app.analysis.corners import Zone, build_zones, zone_metrics
+from app.analysis.degradation import _fit
+from app.analysis.preservation import corner_rows, stint_zone_trends
+from app.analysis.style import STYLE_METRICS, lap_style
 from app.config import POSITION_UNITS_PER_M, TRACE_GRID_M
 from app.processing.laps import build_lap_table
 from app.processing.reference import ReferenceLine, build_reference, project
@@ -122,3 +125,60 @@ def zones(session_id: str) -> list[Zone]:
 def corner_metrics(session_id: str, driver: int, lap: int) -> list[dict]:
     tr = trace(session_id, driver, lap, True)
     return [zone_metrics(tr, z) for z in zones(session_id)]
+
+
+def analysis_laps(session_id: str, driver: int, include_flagged: bool) -> pd.DataFrame:
+    """Clean laps of one driver that have a timing window (and so telemetry)."""
+    laps = lap_table(session_id)
+    d = laps[(laps["driver_number"] == driver) & laps["clean"] & laps["lap_start"].notna() & laps["lap_end"].notna()]
+    if not include_flagged:
+        d = d[d["flags"].map(len) == 0]
+    return d
+
+
+def _metrics_by_lap(session_id: str, driver: int, laps: pd.DataFrame) -> dict[int, list[dict]]:
+    out = {}
+    for lap in laps["lap_number"].astype(int):
+        try:
+            out[lap] = corner_metrics(session_id, driver, lap)
+        except (ValueError, DataUnavailable):
+            continue  # lap without usable telemetry; reported via n_laps
+    return out
+
+
+@lru_cache(maxsize=64)
+def style_rows(session_id: str, driver: int, include_flagged: bool) -> list[dict]:
+    laps = analysis_laps(session_id, driver, include_flagged)
+    zs = zones(session_id)
+    rows = []
+    for lap, metrics in _metrics_by_lap(session_id, driver, laps).items():
+        li = laps[laps["lap_number"] == lap].iloc[0]
+        rows.append({
+            "lap_number": lap, "stint": None if pd.isna(li["stint"]) else int(li["stint"]), "compound": li["compound"],
+            "tyre_age": None if pd.isna(li["tyre_age"]) else int(li["tyre_age"]), "lap_time_s": float(li["lap_time_s"]),
+            **lap_style(trace(session_id, driver, lap, True), metrics, zs),
+        })
+    return rows
+
+
+@lru_cache(maxsize=64)
+def preservation(session_id: str, driver: int, include_flagged: bool) -> dict:
+    laps = analysis_laps(session_id, driver, include_flagged)
+    rows = corner_rows(_metrics_by_lap(session_id, driver, laps), laps)
+    braking = [z.id for z in zones(session_id) if z.kind == "braking"]
+    style = pd.DataFrame(style_rows(session_id, driver, include_flagged))
+    lap_trends = []
+    if not style.empty:
+        for stint, g in style.dropna(subset=["stint", "tyre_age"]).groupby("stint"):
+            x = g["tyre_age"].astype(float).to_numpy()
+            lap_trends.append({"stint": int(stint), "compound": g["compound"].iloc[0], "n_laps": int(len(g)),
+                               "trends": {k: _fit(x, g[k].astype(float).to_numpy()) for k in STYLE_METRICS}})
+    keep = ["lap_number", "stint", "compound", "tyre_age", "zone_id", "time_in_zone_s", "brake_onset_before_apex_m",
+            "brake_onset_resolution_m", "mean_decel_g", "entry_speed_kmh", "min_speed_kmh", "exit_speed_kmh",
+            "throttle_pickup_m", "throttle_ramp_m", "coast_m"]
+    return {
+        "driver_number": driver,
+        "zone_trends": stint_zone_trends(rows, braking),
+        "lap_trends": lap_trends,
+        "rows": rows[[c for c in keep if c in rows]] if not rows.empty else rows,
+    }

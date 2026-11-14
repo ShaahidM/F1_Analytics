@@ -2,7 +2,7 @@ import { create } from "zustand";
 import type { CompareMode } from "./api";
 
 export type ColorBy = "driver" | "speed" | "inputs" | "faster";
-export type Tab = "compare" | "overlay" | "degradation";
+export type Tab = "compare" | "overlay" | "degradation" | "style" | "preservation";
 
 export type ModeParams = {
   lap?: number;

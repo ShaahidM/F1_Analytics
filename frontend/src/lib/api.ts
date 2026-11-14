@@ -158,6 +158,64 @@ export type StintTrend = {
 };
 export type Degradation = { ci_level: number; fuel_s_per_lap: number; stints: StintTrend[]; laps: Lap[] };
 
+export type StyleRow = {
+  lap_number: number;
+  stint: number | null;
+  compound: string | null;
+  tyre_age: number | null;
+  lap_time_s: number;
+} & Record<string, number | null>;
+export type StyleResult = { definitions: Record<string, MetricDef>; drivers: Record<string, StyleRow[]> };
+
+export type Pattern =
+  | "consistent_with_management"
+  | "consistent_with_grip_loss"
+  | "mixed"
+  | "no_clear_pattern"
+  | "insufficient_data";
+export type ZoneTrend = {
+  stint: number;
+  zone_id: number;
+  compound: string | null;
+  n_laps: number;
+  tyre_age_span: number;
+  trends: Record<string, Fit | null>;
+  significant: Record<string, -1 | 0 | 1>;
+  pattern: Pattern;
+  evidence: string[];
+};
+export type PreservationDriver = {
+  driver_number: number;
+  zone_trends: ZoneTrend[];
+  lap_trends: { stint: number; compound: string | null; n_laps: number; trends: Record<string, Fit | null> }[];
+  rows: ({ lap_number: number; stint: number; compound: string | null; tyre_age: number; zone_id: number } & Record<string, number | null>)[];
+};
+export type PreservationResult = {
+  indicators: Record<string, { label: string; unit: string; increase_means: string; min_change: number | null }>;
+  style_metrics: Record<string, MetricDef>;
+  confounders: string[];
+  zones: Zone[];
+  drivers: Record<string, PreservationDriver>;
+};
+
+export type Coef = { estimate: number; ci_low: number; ci_high: number };
+export type ModelB =
+  | { ok: false; reason: string }
+  | {
+      ok: true;
+      ci_level: number;
+      n_laps: number;
+      n_drivers: number;
+      r2: number;
+      residual_sd: number;
+      lap_effect: Coef;
+      track_temp_effect: Coef | null;
+      field_tyre_slopes: Record<string, Coef>;
+      driver_tyre_slopes: Record<"A" | "B", { driver_number: number; compounds: Record<string, Coef & { n_laps: number }> }>;
+      warnings: string[];
+      assumptions: string[];
+    };
+
 type Num = number | null;
 
 export type Trace = {
@@ -225,6 +283,12 @@ export const api = {
       include_flagged: String(includeFlagged),
       fuel_s_per_lap: fuel,
     }),
+  style: (id: string, drivers: number[], includeFlagged: boolean) =>
+    get<StyleResult>(`/api/sessions/${id}/style`, { drivers: drivers.join(","), include_flagged: String(includeFlagged) }),
+  preservation: (id: string, drivers: number[], includeFlagged: boolean) =>
+    get<PreservationResult>(`/api/sessions/${id}/preservation`, { drivers: drivers.join(","), include_flagged: String(includeFlagged) }),
+  model: (id: string, drivers: number[], includeFlagged: boolean) =>
+    get<ModelB>(`/api/sessions/${id}/model`, { drivers: drivers.join(","), include_flagged: String(includeFlagged) }),
   compare: (id: string, params: Record<string, string | number | undefined | null>) =>
     get<CompareResult>(`/api/sessions/${id}/compare`, params),
 };

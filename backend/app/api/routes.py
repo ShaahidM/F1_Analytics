@@ -7,6 +7,9 @@ from fastapi import APIRouter, HTTPException, Query
 
 from app.analysis.corners import METRICS
 from app.analysis.degradation import CI_LEVEL, stint_trends
+from app.analysis.model import fit_session_model
+from app.analysis.preservation import CONFOUNDERS, INDICATORS, MIN_CHANGE
+from app.analysis.style import STYLE_METRICS
 from app.api.serialize import frame, row, value
 from app.config import FIRST_SUPPORTED_SEASON
 from app.processing import session_data
@@ -140,3 +143,52 @@ def degradation(session_id: str, drivers: str, include_flagged: bool = False, fu
         "stints": stint_trends(df, ids, include_flagged, fuel_s_per_lap),
         "laps": frame(df[df["driver_number"].isin(ids)], LAP_FIELDS),
     }
+
+
+def _two_drivers(drivers: str) -> list[int]:
+    ids = [int(d) for d in drivers.split(",") if d]
+    if len(ids) != 2:
+        raise HTTPException(422, "pass exactly two car numbers, e.g. drivers=16,81")
+    return ids
+
+
+@router.get("/sessions/{session_id}/style")
+def style(session_id: str, drivers: str, include_flagged: bool = True):
+    _session(session_id)
+    ids = _two_drivers(drivers)
+    return {
+        "definitions": {k: {"unit": u, "tier": tier, "note": note} for k, (u, tier, note) in STYLE_METRICS.items()},
+        "drivers": {str(d): _guard(lambda d=d: session_data.style_rows(session_id, d, include_flagged)) for d in ids},
+    }
+
+
+@router.get("/sessions/{session_id}/preservation")
+def preservation(session_id: str, drivers: str, include_flagged: bool = True):
+    s, src = _session(session_id)
+    ids = _two_drivers(drivers)
+    out = {}
+    for d in ids:
+        p = _guard(lambda d=d: session_data.preservation(session_id, d, include_flagged))
+        out[str(d)] = {**p, "rows": frame(p["rows"]) if len(p["rows"]) else []}
+    return {
+        "indicators": {k: {"label": lab, "unit": u, "increase_means": inc, "min_change": MIN_CHANGE.get(k)}
+                       for k, (lab, u, inc) in INDICATORS.items()},
+        "style_metrics": {k: {"unit": u, "tier": tier, "note": note} for k, (u, tier, note) in STYLE_METRICS.items()},
+        "confounders": CONFOUNDERS + src.capabilities(s).notes,
+        "zones": [z.to_dict() for z in _guard(lambda: session_data.zones(session_id))],
+        "drivers": out,
+    }
+
+
+@router.get("/sessions/{session_id}/model")
+def session_model(session_id: str, drivers: str, include_flagged: bool = True):
+    s, src = _session(session_id)
+    if not s.is_race:
+        raise HTTPException(422, "Model B needs a race: qualifying has no stints or fuel burn to separate")
+    a, b = _two_drivers(drivers)
+    laps_df = _guard(lambda: session_data.lap_table(session_id))
+    try:
+        weather = src.weather(s)
+    except DataUnavailable:
+        weather = None
+    return fit_session_model(laps_df, a, b, include_flagged, weather)
