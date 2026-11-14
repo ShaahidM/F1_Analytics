@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useStore } from "@/lib/store";
 
@@ -18,11 +18,15 @@ export function SelectionBar() {
   const { year, sessionId, driverA, driverB, setYear, setSession, setDrivers } = useStore();
 
   const seasons = useQuery({ queryKey: ["seasons"], queryFn: api.seasons });
+  // Seasons without telemetry (2019–22 today) are hidden unless asked for: most views need telemetry.
+  const [showLimited, setShowLimited] = useState(false);
+  const visible = (seasons.data ?? []).filter((s) => !s.limited || showLimited || s.year === year);
   const events = useQuery({ queryKey: ["events", year], queryFn: () => api.events(year!), enabled: year !== null });
   const session = useQuery({ queryKey: ["session", sessionId], queryFn: () => api.session(sessionId!), enabled: !!sessionId });
 
   useEffect(() => {
-    if (year === null && seasons.data?.length) setYear(seasons.data[0].year);
+    const first = seasons.data?.find((s) => !s.limited) ?? seasons.data?.[0];
+    if (year === null && first) setYear(first.year);
   }, [seasons.data, year, setYear]);
 
   const event = events.data?.find((e) => e.sessions.some((s) => s.id === sessionId));
@@ -35,15 +39,21 @@ export function SelectionBar() {
         <div className="text-[10px] text-ink-3">two-driver performance &amp; tyre analysis</div>
       </div>
 
-      <Field label="Season">
-        <select value={year ?? ""} onChange={(e) => setYear(Number(e.target.value))}>
-          {seasons.data?.map((s) => (
-            <option key={s.year} value={s.year}>
-              {s.year} {s.source === "openf1" ? "" : "· limited data"}
-            </option>
-          ))}
-        </select>
-      </Field>
+      <div className="flex flex-col gap-1">
+        <Field label="Season">
+          <select value={year ?? ""} onChange={(e) => setYear(Number(e.target.value))}>
+            {visible.map((s) => (
+              <option key={s.year} value={s.year}>
+                {s.year} {s.limited ? "· limited data" : ""}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <label className="flex items-center gap-1 text-[10px] text-ink-3" title="Lap times and pit stops only: no telemetry, sectors or compounds">
+          <input type="checkbox" checked={showLimited} onChange={(e) => setShowLimited(e.target.checked)} />
+          show limited-data seasons
+        </label>
+      </div>
 
       <Field label="Grand Prix">
         <select

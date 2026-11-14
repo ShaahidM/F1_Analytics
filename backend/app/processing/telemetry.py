@@ -15,6 +15,7 @@ GAP_WARN_S = 1.5
 G = 9.80665
 ACCEL_WINDOW = 7
 TIME_CORRECTION_WINDOW_M = 400.0
+DRIVEN_DT = 0.02  # s, integration step for distance driven
 
 
 def _secs(dates: pd.Series, origin: pd.Timestamp) -> np.ndarray:
@@ -85,6 +86,15 @@ def lap_trace(car: pd.DataFrame, pos: pd.DataFrame, ref: ReferenceLine, lap_star
     corr_n = max(1, int(TIME_CORRECTION_WINDOW_M / grid_m))
     t_grid = t_int + uniform_filter1d(t_pos - t_int, size=corr_n, mode="nearest")
 
+    # Distance actually driven = ∫ wheel speed dt, mapped onto track distance. Positions are snapped to one line,
+    # so (driven − track) through a corner reflects a longer/shorter line OR tyre slip (indistinguishable).
+    tf = np.arange(tc[0], tc[-1], DRIVEN_DT)
+    vf = np.interp(tf, tc, c["speed"].to_numpy(float)) / 3.6
+    driven_t = np.r_[0.0, np.cumsum((vf[1:] + vf[:-1]) / 2 * DRIVEN_DT)]
+    s_f = np.interp(tf, tp, s_cont) + np.arange(len(tf)) * 1e-9
+    driven = np.interp(grid, s_f, driven_t) - np.interp(0.0, s_f, driven_t)
+    speed_scale = (np.interp(L, s_f, driven_t) - np.interp(0.0, s_f, driven_t)) / L
+
     spacing = np.diff(s_car)
     sample_spacing = np.interp(grid, s_car_u[1:], spacing) if len(spacing) else np.full_like(grid, np.nan)
     gaps = np.diff(tp[(tp >= 0) & (tp <= (lap_end - lap_start).total_seconds())])
@@ -104,6 +114,7 @@ def lap_trace(car: pd.DataFrame, pos: pd.DataFrame, ref: ReferenceLine, lap_star
         "y": _r(np.interp(grid, s_pos_u, py), 1),
         "lateral_m": _r(np.interp(grid, s_pos_u, lat), 2),
         "accel_g": _r(accel_g, 2),
+        "driven_m": _r(driven, 2),
         "sample_spacing_m": _r(sample_spacing, 1),
         "quality": {
             "car_samples": int(((tc >= 0) & (tc <= (lap_end - lap_start).total_seconds())).sum()),
@@ -111,6 +122,7 @@ def lap_trace(car: pd.DataFrame, pos: pd.DataFrame, ref: ReferenceLine, lap_star
             "max_pos_gap_s": round(float(gaps.max()), 2) if len(gaps) else None,
             "has_gaps": bool(len(gaps) and gaps.max() > GAP_WARN_S),
             "trace_time_s": round(float(np.interp(L, s_pos_u, tp)), 3),
+            "speed_scale": round(float(speed_scale), 4),
         },
     }
     if include_raw:

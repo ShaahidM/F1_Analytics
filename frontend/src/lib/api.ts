@@ -33,7 +33,7 @@ export type SessionRef = {
   capabilities: Capabilities;
 };
 
-export type Season = { year: number; source: string };
+export type Season = { year: number; source: string; limited: boolean };
 
 export type GPEvent = {
   meeting_key: string | number;
@@ -268,6 +268,13 @@ export type Strategy = {
   timing_basis: string;
 };
 
+export type LineStats = { mean: number; sd: number; n: number; se: number };
+export type LineResult = {
+  zones: Zone[];
+  rows: { zone_id: number; a: LineStats | null; b: LineStats | null; diff_m: number | null; se_m: number | null; z: number | null;
+    halves: number[] | null; replicated: boolean; significant: boolean }[];
+};
+
 type Num = number | null;
 
 export type Trace = {
@@ -342,6 +349,9 @@ export const api = {
   model: (id: string, drivers: number[], includeFlagged: boolean) =>
     get<ModelB>(`/api/sessions/${id}/model`, { drivers: drivers.join(","), include_flagged: String(includeFlagged) }),
   strategy: (id: string, drivers: number[]) => get<Strategy>(`/api/sessions/${id}/strategy`, { drivers: drivers.join(",") }),
+  traffic: (id: string) => get<{ state: string; done: number; total: number }>(`/api/sessions/${id}/traffic`),
+  line: (id: string, drivers: number[], includeFlagged: boolean) =>
+    get<LineResult>(`/api/sessions/${id}/line`, { drivers: drivers.join(","), include_flagged: String(includeFlagged) }),
   compare: (id: string, params: Record<string, string | number | undefined | null>) =>
     get<CompareResult>(`/api/sessions/${id}/compare`, params),
 };

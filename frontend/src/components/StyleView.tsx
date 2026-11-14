@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { Data } from "plotly.js-dist-min";
 import { useState } from "react";
 import { api, type StyleRow } from "@/lib/api";
+import type { Data as PlotData } from "plotly.js-dist-min";
 import { DRIVER } from "@/lib/colors";
 import { Badge } from "./Badge";
 import { Plot } from "./Plot";
@@ -80,6 +81,11 @@ export function StyleView({ sessionId, slots }: { sessionId: string; slots: Slot
         <span className="text-ink-3">Each dot is one clean lap; the bar marks the median.</span>
       </div>
 
+      <p className="text-[11px] text-ink-3">
+        Style differences reflect the car and set-up as well as the driver; teammates give the fairest comparison. Values
+        come from ~4 Hz telemetry and braking is on/off only (no pressure).
+      </p>
+
       {GROUPS.map((g) => (
         <section key={g.title} className="rounded border border-border bg-surface-1 p-2">
           <h3 className="px-1 text-xs font-semibold uppercase tracking-wider text-ink-3">{g.title}</h3>
@@ -117,10 +123,69 @@ export function StyleView({ sessionId, slots }: { sessionId: string; slots: Slot
           </div>
         </section>
       ))}
-      <p className="text-[11px] text-ink-3">
-        All values are calculated from ~4 Hz telemetry on the distance grid; braking is on/off only (no pressure). Style
-        differences also reflect car characteristics and set-up, not only the driver.
-      </p>
+      <LineSection sessionId={sessionId} slots={slots} includeFlagged={includeFlagged} />
     </div>
+  );
+}
+
+/** EXPERIMENTAL line-length proxy: race-average extra distance driven per corner zone (tier E). */
+function LineSection({ sessionId, slots, includeFlagged }: { sessionId: string; slots: Slot[]; includeFlagged: boolean }) {
+  const q = useQuery({
+    queryKey: ["line", sessionId, slots.map((s) => s.driver), includeFlagged],
+    queryFn: () => api.line(sessionId, slots.map((s) => s.driver), includeFlagged),
+    retry: false,
+  });
+  if (q.isLoading) return <div className="text-xs text-ink-3">Computing line-length proxy…</div>;
+  if (!q.data) return null;
+  const [a, b] = slots;
+  const label = (id: number) => q.data!.zones.find((z) => z.id === id)?.label ?? String(id);
+  const rows = q.data.rows.filter((r) => r.diff_m !== null);
+  const chart: PlotData[] = [{
+    type: "scatter", mode: "markers", orientation: "h", y: rows.map((r) => label(r.zone_id)), x: rows.map((r) => r.diff_m),
+    marker: { size: 9, color: rows.map((r) => (r.significant ? ((r.diff_m ?? 0) > 0 ? DRIVER.a : DRIVER.b) : "#8a8984")),
+      line: { color: "#1a1a19", width: 2 } },
+    error_x: { type: "data", array: rows.map((r) => 1.96 * (r.se_m ?? 0)), color: "#8a8984", thickness: 1, width: 3 },
+    hovertemplate: "%{y}: %{x:+.1f} m<extra></extra>",
+  }];
+  return (
+    <section className="rounded border border-border bg-surface-1 p-2">
+      <h3 className="flex flex-wrap items-center gap-2 px-1 text-xs font-semibold">
+        Line length through each corner (experimental)
+        <Badge tier="E" note="Distance driven from wheel speed minus track distance, averaged over all clean laps; 95% CI" />
+      </h3>
+      <p className="px-1 text-[11px] text-ink-3">
+        Public positions are snapped to one track line, so the line itself can&apos;t be drawn. Wheel speed still measures how
+        far each car really travelled: extra metres through a corner mean <b>a longer line or more tyre slip</b>, and the two
+        can&apos;t be separated. Per-lap noise is ~5 m, so only session averages are shown. Coloured = the difference is at
+        least 2 standard errors and has the same sign in both halves of the session.
+      </p>
+      <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+        <Plot height={Math.max(180, rows.length * 30 + 60)} data={chart}
+          layout={{ showlegend: false, xaxis: { title: { text: `${a.label} − ${b.label} extra distance (m)` }, zeroline: true },
+            yaxis: { autorange: "reversed", automargin: true }, margin: { l: 70, r: 12, t: 8, b: 44 } }} />
+        <table className="w-full text-[11px]">
+          <thead className="text-left text-ink-3">
+            <tr className="border-b border-border">
+              <th className="px-2 py-1 font-normal">Zone</th>
+              <th className="px-2 py-1 font-normal">{a.label} (mean ± SE, n)</th>
+              <th className="px-2 py-1 font-normal">{b.label}</th>
+              <th className="px-2 py-1 font-normal">Difference</th>
+              <th className="px-2 py-1 font-normal">1st / 2nd half</th>
+            </tr>
+          </thead>
+          <tbody className="font-mono">
+            {q.data.rows.map((r) => (
+              <tr key={r.zone_id} className={`border-b border-border/60 ${r.significant ? "text-ink" : "text-ink-3"}`}>
+                <td className="px-2 py-1 font-semibold">{label(r.zone_id)}</td>
+                <td className="px-2 py-1">{r.a ? `${r.a.mean.toFixed(1)} ± ${r.a.se.toFixed(1)} (${r.a.n})` : "—"}</td>
+                <td className="px-2 py-1">{r.b ? `${r.b.mean.toFixed(1)} ± ${r.b.se.toFixed(1)} (${r.b.n})` : "—"}</td>
+                <td className="px-2 py-1">{r.diff_m === null ? "—" : `${r.diff_m >= 0 ? "+" : ""}${r.diff_m.toFixed(1)} m (z ${r.z?.toFixed(1)})`}</td>
+                <td className="px-2 py-1">{r.halves?.map((h) => `${h >= 0 ? "+" : ""}${h.toFixed(1)}`).join(" / ") ?? "—"}{r.replicated ? " ✓" : ""}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }

@@ -18,9 +18,10 @@ choice, or an engineering gap. Update this file when a limitation is removed or 
    ERS state or set-up. Team-radio transcripts don't exist publicly (OpenF1 only links audio on the locked archive).
 
 ## 2. Telemetry quality
-8. **Positions are map-matched to one track line**, so lateral racing-line differences are not measurable. The map draws the
-   two drivers' traces offset for visibility only; "racing line" analysis is longitudinal (where braking, lifting,
-   throttle and minimum speed happen).
+8. **Positions are map-matched to one track line**, so the racing line can't be drawn and per-lap line differences aren't
+   measurable. The map draws traces offset for visibility only. *Partial workaround (experimental)*: extra distance
+   driven per corner (wheel-speed integral minus track distance) averaged over a session detects consistent differences
+   of ≳ 3 m, but it can't separate a longer line from more tyre slip (wheel speed is affected by slip).
 9. **~4 Hz sampling** (~20 m between samples at 300 km/h): brake points are ±7–20 m, events shorter than ~0.3 s are
    missed, quick gear shifts can be missed, and wheelspin can't be detected (feature dropped).
 10. **Brake is on/off only**: no pressure or trail-braking intensity. Braking intensity is a kinematic estimate.
@@ -37,8 +38,11 @@ choice, or an engineering gap. Update this file when a limitation is removed or 
 ## 3. Lap classification
 15. **SC/VSC/red windows are reconstructed heuristically** from race-control messages (SC ends one typical lap after
     "IN THIS LAP", VSC 20 s after "ENDING", red one lap after the next green). Laps at the boundaries can be mis-flagged.
-16. **The traffic flag uses the classification interval** (< 1.5 s to the car ahead), not on-track proximity: lapped
-    backmarkers are missed, and DRS trains flag most laps (Monza 2024: 73/106 laps for LEC/PIA).
+16. **Traffic now uses every car's on-track position** (racing cars, backmarkers, blue flags). The first time a session
+    is opened it needs a background download (~20 requests, ~30–60 s). Until then the classification-interval fallback
+    is used, which can't see backmarkers. Gaps are converted with the car's own speed, so they're approximate (±0.5 s
+    against OpenF1 intervals). It doesn't capture dirty-air effects beyond 1.5 s or the car behind except for blue flags.
+    (Fixed: OpenF1 reports the leader's interval as 0, which used to flag every lap led as traffic.)
 17. **Yellow flags aren't mapped to track position**: any yellow anywhere during the lap soft-flags it.
 18. **The outlier filter (5 × MAD per stint) doesn't detect car problems**: damage or engine issues (e.g. LEC, Bahrain
     2019) stay in the data and look like "degradation".
@@ -92,4 +96,8 @@ choice, or an engineering gap. Update this file when a limitation is removed or 
 40. **No automated UI tests in the repo** (Playwright checks were run ad hoc). Backend has 17 offline unit tests.
 41. **Limited sessions verified by hand**: 2024 Monza race and qualifying, 2023 Monza and Australia, 2026 São Paulo,
     2019 Bahrain. Street circuits, Suzuka's crossover, sprint sessions and red-flag restarts haven't been visually checked.
-42. **Practice and live sessions are out of scope.**
+42. **Practice and live sessions are out of scope.** FP2 long runs could add controlled per-compound degradation data
+    (fuel loads and engine modes are unknown, so they can't feed Model B directly). Candidate next phase.
+43. **2019–2022 is hidden by default** (a switch shows it): those seasons support lap times, degradation trends and
+    strategy only.
+44. **Tyre-age views (degradation, pace vs preservation, strategy) are disabled for qualifying**: 1–3 push laps per set.

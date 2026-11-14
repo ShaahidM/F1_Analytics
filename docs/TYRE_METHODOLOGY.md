@@ -43,9 +43,13 @@ A lap enters the pace and degradation analysis only if all of these hold, and ev
    sector level) are a *soft flag* only, because almost every race lap has one somewhere.
 3. Not deleted (race_control messages "LAP … DELETED" for that driver).
 4. Same weather regime (no `rainfall` change; compound not INTERMEDIATE/WET unless the analysis is wet-only).
-5. Traffic: flagged (not dropped) if `interval` to the car ahead is < 1.5 s at any point during the lap (configurable).
-   The user can include or exclude traffic laps. `interval` is the gap to the car ahead *in the classification*, so
-   lapped backmarkers on track are **not** detected.
+5. Traffic: flagged (not dropped). **Primary method (`processing/traffic.py`)**: every car's position is projected to
+   cumulative race distance; each second the nearest car physically ahead is found and its distance is turned into a
+   time gap with the car's own speed. The lap relation classifies it as a racing car, a **lapped backmarker**, or a car
+   lapping ahead; a car ≥ 1 lap up within 1 s behind means "being lapped (blue flags)". Pit-lane cars (lateral offset
+   > 8 m) are ignored. Validated on Monza 2024: correlation 0.95 with OpenF1 `interval` for same-lap cars, plus 39
+   backmarker laps that intervals missed. It runs in the background (every car's positions, ~20 requests); until it
+   finishes, the fallback is the classification `interval` < 1.5 s (leader's interval of 0 treated as missing: fixed bug).
 6. Robust outlier filter: |lap − stint median| > 5 × MAD, flagged and excluded by default.
 
 ## 4. Degradation model (ESTIMATED)
@@ -90,7 +94,7 @@ The *change with tyre age* and the *difference between drivers at equal tyre age
 | P5 | Throttle ramp rate | d(throttle)/ds from pickup to full | progressive = rear preservation | as P4 |
 | P6 | Coasting distance | throttle < 5% and brake = 0 at > 150 km/h | lift-and-coast = saving tyres, brakes or fuel | **fuel saving, brake cooling, ERS harvest (esp. 2026)**, so it is never attributed to tyres alone |
 | P7 | Full-throttle fraction | % of lap distance with throttle ≥ 98% | lower = managing | traffic, DRS/aero, 2026 energy |
-| P8 | ~~Line offset~~ **NOT FEASIBLE** | positions are map-matched, so lateral offset is ≈0 by construction | — | — |
+| P8 | Extra distance driven (EXPERIMENTAL) | ∫ wheel speed dt (calibrated per lap so the whole lap = track length) minus track distance through the zone | longer line **or more tyre slip**; rising slip with tyre age would be a wear signal | line choice, wheel-speed sensor slip, traffic; per-lap noise ~4–7 m, so only session averages or stint trends are usable |
 | P9 | Sector-time drift vs tyre age | per-sector Model A slope | where the time loss concentrates | as Model A |
 
 **The key interpretation rule: voluntary vs forced slowdown** (implemented in `analysis/preservation.py::classify`).

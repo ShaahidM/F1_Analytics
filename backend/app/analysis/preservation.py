@@ -22,6 +22,7 @@ INDICATORS = {
     "throttle_pickup_m": ("P4 Throttle pickup after apex", "m", "later throttle"),
     "throttle_ramp_m": ("P5 Pickup → full throttle", "m", "more progressive throttle"),
     "coast_m": ("P6 Coasting before the corner", "m", "more lift-and-coast"),
+    "path_excess_m": ("P8 Extra distance driven (experimental)", "m", "a longer line or more tyre slip"),
     "time_in_zone_s": ("Time in zone", "s", "slower through the zone"),
 }
 
@@ -45,6 +46,7 @@ MIN_CHANGE = {
     "throttle_pickup_m": 10.0,
     "throttle_ramp_m": 10.0,
     "coast_m": 10.0,
+    "path_excess_m": 3.0,
     "time_in_zone_s": 0.05,
 }
 

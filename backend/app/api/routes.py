@@ -22,7 +22,8 @@ router = APIRouter(prefix="/api")
 LAP_FIELDS = [
     "driver_number", "lap_number", "lap_start", "lap_time_s", "s1_s", "s2_s", "s3_s", "i1_speed", "i2_speed",
     "st_speed", "is_pit_out", "is_pit_in", "stint", "compound", "tyre_age", "sc", "vsc", "red", "yellow",
-    "deleted", "min_interval_s", "clean", "exclude_reasons", "flags", "tyre_age_assumed",
+    "deleted", "min_interval_s", "clean", "exclude_reasons", "flags", "tyre_age_assumed", "track_gap_ahead_s",
+    "track_car_ahead", "traffic_kind", "traffic_share", "being_lapped", "traffic_source",
 ]
 
 
@@ -47,7 +48,8 @@ def seasons():
     out = []
     for year in range(datetime.now(timezone.utc).year, FIRST_SUPPORTED_SEASON - 1, -1):
         try:
-            out.append({"year": year, "source": source_for_season(year).name})
+            src = source_for_season(year)
+            out.append({"year": year, "source": src.name, "limited": not src.provides_telemetry})
         except KeyError:
             continue
     return out
@@ -132,9 +134,15 @@ def corners(session_id: str, driver: int, lap: int):
             "definitions": {k: {"unit": u, "tier": tier, "note": note} for k, (u, tier, note) in METRICS.items()}}
 
 
+def _race_only(s, what: str) -> None:
+    if not s.is_race:
+        raise HTTPException(422, f"{what} needs a race: qualifying has only 1–3 push laps per tyre set")
+
+
 @router.get("/sessions/{session_id}/degradation")
 def degradation(session_id: str, drivers: str, include_flagged: bool = False, fuel_s_per_lap: float = 0.0):
-    _session(session_id)
+    s, _ = _session(session_id)
+    _race_only(s, "Tyre-age analysis")
     df = _guard(lambda: session_data.lap_table(session_id))
     ids = [int(d) for d in drivers.split(",")]
     return {
@@ -165,6 +173,7 @@ def style(session_id: str, drivers: str, include_flagged: bool = True):
 @router.get("/sessions/{session_id}/preservation")
 def preservation(session_id: str, drivers: str, include_flagged: bool = True):
     s, src = _session(session_id)
+    _race_only(s, "Tyre-age analysis")
     ids = _two_drivers(drivers)
     out = {}
     for d in ids:
@@ -199,3 +208,18 @@ def strategy(session_id: str, drivers: str):
     _session(session_id)
     a, b = _two_drivers(drivers)
     return _guard(lambda: session_data.strategy(session_id, a, b))
+
+
+@router.get("/sessions/{session_id}/traffic")
+def traffic_status(session_id: str):
+    """Starts on-track traffic detection on first call (background), then reports progress."""
+    _session(session_id)
+    st = _guard(lambda: session_data.ensure_traffic(session_id))
+    return {k: v for k, v in st.items() if k != "result"}
+
+
+@router.get("/sessions/{session_id}/line")
+def line(session_id: str, drivers: str, include_flagged: bool = True):
+    _session(session_id)
+    a, b = _two_drivers(drivers)
+    return _guard(lambda: session_data.line_comparison(session_id, a, b, include_flagged))

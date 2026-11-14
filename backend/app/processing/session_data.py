@@ -10,28 +10,75 @@ from scipy.signal import find_peaks
 
 from app.analysis.corners import Zone, build_zones, zone_metrics
 from app.analysis.degradation import _fit
+from app.analysis.line import compare_line
 from app.analysis.preservation import corner_rows, stint_zone_trends
 from app.analysis.strategy import crossing_times, pit_cycles, pit_stops, positions, stints_table
 from app.analysis.style import STYLE_METRICS, lap_style
 from app.config import POSITION_UNITS_PER_M, TRACE_GRID_M
+from app.processing import traffic
 from app.processing.laps import build_lap_table
 from app.processing.reference import ReferenceLine, build_reference, project
 from app.processing.telemetry import lap_trace
 from app.sources import multiviewer
 from app.sources.base import DataUnavailable
 from app.sources.registry import get_session, source_for_session
+from app.storage.cache import parquet_path
 
 # If MultiViewer corner markers sit further than this from our reference line, its layout doesn't match.
 CORNER_MATCH_MAX_M = 40.0
 
 
 @lru_cache(maxsize=32)
+def base_lap_table(session_id: str) -> pd.DataFrame:
+    """Lap table with the classification-interval traffic heuristic (no extra downloads)."""
+    s = get_session(session_id)
+    laps = build_lap_table(source_for_session(session_id), s)
+    laps["traffic_source"] = "classification interval" if s.is_race and laps["min_interval_s"].notna().any() else "none"
+    return laps
+
+
 def lap_table(session_id: str) -> pd.DataFrame:
-    return build_lap_table(source_for_session(session_id), get_session(session_id))
+    """Base table, upgraded with on-track traffic once every car's positions have been processed."""
+    return _lap_table(session_id, traffic.result(session_id) is not None)
+
+
+@lru_cache(maxsize=64)
+def _lap_table(session_id: str, traffic_ready: bool) -> pd.DataFrame:
+    base = base_lap_table(session_id)
+    if not traffic_ready:
+        return base
+    return traffic.apply(base, traffic.result(session_id), get_session(session_id).is_race)
+
+
+def _invalidate_traffic_dependents(session_id: str) -> None:
+    for cached in (style_rows, preservation, strategy):
+        cached.cache_clear()
+
+
+def ensure_traffic(session_id: str) -> dict:
+    """Start (or load) on-track traffic detection for a session; returns its status."""
+    s = get_session(session_id)
+    src = source_for_session(session_id)
+    if not src.capabilities(s).position:
+        return {"state": "unavailable", "done": 0, "total": 0}
+    if traffic.status(session_id)["state"] == "not_started":
+        path = parquet_path(src.name, session_id, "traffic")
+        if path.exists():
+            traffic.preload(session_id, pd.read_parquet(path))
+            _invalidate_traffic_dependents(session_id)
+        else:
+            def ready(sid: str) -> None:
+                if s.is_settled():
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    traffic.result(sid).to_parquet(path, index=False)
+                _invalidate_traffic_dependents(sid)
+
+            traffic.start(session_id, src, s, reference(session_id)[0], base_lap_table(session_id), ready)
+    return traffic.status(session_id)
 
 
 def lap_row(session_id: str, driver: int, lap: int) -> pd.Series:
-    laps = lap_table(session_id)
+    laps = base_lap_table(session_id)
     m = laps[(laps["driver_number"] == driver) & (laps["lap_number"] == lap)]
     if m.empty:
         raise KeyError(f"lap {lap} of car {driver}")
@@ -46,7 +93,7 @@ def reference(session_id: str) -> tuple[ReferenceLine, dict]:
     caps = src.capabilities(s)
     if not caps.position:
         raise DataUnavailable("position data")
-    laps = lap_table(session_id)
+    laps = base_lap_table(session_id)
     cand = laps[laps["lap_time_s"].notna() & ~laps["deleted"] & ~laps["is_pit_out"] & ~laps["is_pit_in"]
                 & laps["lap_start"].notna()].sort_values("lap_time_s")
     for row in cand.head(5).itertuples():  # fall back to the next fastest if a lap has telemetry gaps
@@ -176,7 +223,7 @@ def preservation(session_id: str, driver: int, include_flagged: bool) -> dict:
                                "trends": {k: _fit(x, g[k].astype(float).to_numpy()) for k in STYLE_METRICS}})
     keep = ["lap_number", "stint", "compound", "tyre_age", "zone_id", "time_in_zone_s", "brake_onset_before_apex_m",
             "brake_onset_resolution_m", "mean_decel_g", "entry_speed_kmh", "min_speed_kmh", "exit_speed_kmh",
-            "throttle_pickup_m", "throttle_ramp_m", "coast_m"]
+            "throttle_pickup_m", "throttle_ramp_m", "coast_m", "path_excess_m"]
     return {
         "driver_number": driver,
         "zone_trends": stint_zone_trends(rows, braking),
@@ -217,3 +264,10 @@ def strategy(session_id: str, a: int, b: int) -> dict:
         "cycles": pit_cycles(cross, stops, laps, a, b),
         "timing_basis": "line-crossing timestamps" if laps["lap_end"].notna().any() else "cumulative lap times",
     }
+
+
+def line_comparison(session_id: str, a: int, b: int, include_flagged: bool) -> dict:
+    ra = preservation(session_id, a, include_flagged)["rows"]
+    rb = preservation(session_id, b, include_flagged)["rows"]
+    zs = zones(session_id)
+    return {"zones": [z.to_dict() for z in zs], "rows": compare_line(ra, rb, [z.id for z in zs])}

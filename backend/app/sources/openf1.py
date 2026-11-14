@@ -24,6 +24,7 @@ def _ts(series: pd.Series) -> pd.Series:
 class OpenF1Source(SessionSource):
     name = "openf1"
     prefix = "of"
+    provides_telemetry = True
 
     def _get(self, endpoint: str, params: dict, ttl: timedelta | None = None) -> list[dict]:
         try:
@@ -187,7 +188,8 @@ class OpenF1Source(SessionSource):
                 "date": _ts(df["date"]),
                 "driver_number": df["driver_number"].astype(int),
                 # Non-numeric values such as "+1 LAP" become NaN (lapped, not a time gap).
-                "interval_s": pd.to_numeric(df["interval"], errors="coerce"),
+                # The leader's interval is reported as 0, not null: it has no car ahead, so treat it as missing.
+                "interval_s": pd.to_numeric(df["interval"], errors="coerce").replace(0.0, float("nan")),
                 "gap_to_leader_s": pd.to_numeric(df["gap_to_leader"], errors="coerce"),
             })
 

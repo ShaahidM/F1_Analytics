@@ -96,6 +96,7 @@ class SessionSource:
 
     name: str = "base"
     prefix: str = ""
+    provides_telemetry: bool = False  # used to mark seasons as "limited data" in the catalog
 
     def has_season(self, year: int) -> bool:
         raise NotImplementedError

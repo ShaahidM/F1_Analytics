@@ -92,7 +92,7 @@ export function DegradationView({ sessionId, slots }: { sessionId: string; slots
       <div className="flex flex-wrap items-center gap-4 rounded border border-border bg-surface-1 px-3 py-2 text-xs text-ink-2">
         <label className="flex items-center gap-2">
           <input type="checkbox" checked={includeFlagged} onChange={(e) => setIncludeFlagged(e.target.checked)} />
-          Include laps flagged for traffic (&lt; 1.5 s behind) or yellow flags (hollow markers)
+          Include laps flagged for traffic (within 1.5 s of a car or backmarker on track, or being lapped) or yellow flags (hollow markers)
         </label>
         <label className="flex items-center gap-2">
           Fuel-burn correction <Badge tier="A" note="An assumption, not data: lap time gained per lap of fuel burned. Typical published estimates are ~0.03 s/kg × ~1.5–1.8 kg/lap ≈ 0.05–0.06 s/lap" />
