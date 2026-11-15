@@ -152,7 +152,9 @@ def zone_metrics(tr: dict, z: Zone) -> dict:
     s_min, v_min = float(s[i_min]), float(v[i_min])
     out["min_speed_kmh"] = round(v_min, 1)
     out["min_speed_offset_m"] = round(s_min - z.apex_s, 1)
-    out["approach_max_kmh"] = round(float(np.nanmax(v[(s >= z.start_s) & (s <= s_min)])), 1)
+    # A lap's own minimum can fall before the shared zone start (e.g. Monaco hairpins), leaving no approach samples.
+    approach = v[(s >= z.start_s) & (s <= s_min)]
+    out["approach_max_kmh"] = round(float(np.nanmax(approach)), 1) if approach.size else None
     out["exit_speed_kmh"] = round(at(v, min(z.apex_s + EXIT_SPEED_OFFSET_M, z.end_s)), 1)
 
     pre = (s >= z.start_s) & (s <= s_min)

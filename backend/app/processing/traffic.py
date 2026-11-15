@@ -35,6 +35,7 @@ PIT_LATERAL_M = 8.0
 GRID_DT_S = 1.0
 MAX_SAMPLE_GAP_S = 5.0
 MIN_SPEED_MS = 10.0
+MIN_MOVING_MS = 5.0  # below this a car is treated as stopped (retired or parked)
 EPOCH = pd.Timestamp("1970-01-01", tz="UTC")
 
 _state: dict[str, dict] = {}
@@ -112,7 +113,10 @@ def compute(src: SessionSource, s: SessionRef, ref: ReferenceLine, laps: pd.Data
         pit[i] = np.interp(grid, t, lat) > PIT_LATERAL_M
 
     v = np.gradient(D, GRID_DT_S, axis=1)
-    valid = ~np.isnan(D) & ~pit
+    # Retired cars keep reporting a frozen position (e.g. lap-1 crashes at Monaco/Suzuka 2024); a car that isn't
+    # moving is never traffic, otherwise everyone passing the crash site would be flagged every lap.
+    moving = np.nan_to_num(v, nan=0.0) > MIN_MOVING_MS
+    valid = ~np.isnan(D) & ~pit & moving
     rows = []
     for i, d in enumerate(drivers):
         rel = D - D[i]

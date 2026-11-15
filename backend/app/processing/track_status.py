@@ -46,6 +46,9 @@ def neutralisation_windows(rc: pd.DataFrame, typical_lap: pd.Timedelta, session_
                 open_.setdefault("sc", date)
             elif "SAFETY CAR IN THIS LAP" in msg:
                 close("sc", date + typical_lap)
+        elif row.category == "SessionStatus" and "SESSION STARTED" in msg and "red" in open_:
+            # Red-flag restarts are signalled by the session restarting, not by a green flag (Monaco/Suzuka 2024).
+            close("red", date + typical_lap)
         elif row.category == "Flag":
             flag = str(row.flag or "").upper()
             scope = str(row.scope or "")

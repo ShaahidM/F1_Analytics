@@ -91,3 +91,12 @@ def test_select_modes_and_comparability():
     assert "tyre_age" not in {d["kind"] for d in r["differences"]}
     with pytest.raises(SelectionError):
         select_laps(laps, 1, 2, "same_lap", True)
+
+
+def test_red_flag_closes_on_session_restart():
+    rc = _rc([
+        ("2024-01-01T12:00:00Z", "Flag", "RED", "Track", None, "RED FLAG"),
+        ("2024-01-01T12:40:00Z", "SessionStatus", None, None, None, "SESSION STARTED"),
+    ])
+    (w,) = neutralisation_windows(rc, pd.Timedelta(seconds=90), T0 + pd.Timedelta(hours=3))
+    assert w.kind == "red" and w.end == pd.Timestamp("2024-01-01T12:41:30Z")

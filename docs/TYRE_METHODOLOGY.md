@@ -47,8 +47,10 @@ A lap enters the pace and degradation analysis only if all of these hold, and ev
    cumulative race distance; each second the nearest car physically ahead is found and its distance is turned into a
    time gap with the car's own speed. The lap relation classifies it as a racing car, a **lapped backmarker**, or a car
    lapping ahead; a car ≥ 1 lap up within 1 s behind means "being lapped (blue flags)". Pit-lane cars (lateral offset
-   > 8 m) are ignored. Validated on Monza 2024: correlation 0.95 with OpenF1 `interval` for same-lap cars, plus 39
-   backmarker laps that intervals missed. It runs in the background (every car's positions, ~20 requests); until it
+   > 8 m) and stationary cars (< 5 m/s: retired cars keep a frozen position) are ignored. Validated on Monza 2024:
+   correlation 0.95 with OpenF1 `interval` for same-lap cars, plus 39 backmarker laps that intervals missed. "Being
+   lapped" checked against the official blue-flag log (Monza, Monaco, Suzuka 2024): recall 96–100%, precision
+   95–100% within ±1 lap. It runs in the background (every car's positions, ~20 requests); until it
    finishes, the fallback is the classification `interval` < 1.5 s (leader's interval of 0 treated as missing: fixed bug).
 6. Robust outlier filter: |lap − stint median| > 5 × MAD, flagged and excluded by default.
 

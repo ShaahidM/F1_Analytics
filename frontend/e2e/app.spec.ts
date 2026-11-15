@@ -1,0 +1,86 @@
+import { expect, test, type Page } from "@playwright/test";
+
+// The selection fields wrap their <select> in a <label> whose first <span> is the field name.
+const field = (page: Page, name: string) => page.locator(`label:has(> span:text-is("${name}")) select`);
+
+async function choose(page: Page, name: string, pattern: RegExp) {
+  const select = field(page, name);
+  await expect
+    .poll(async () => (await select.locator("option").allTextContents()).some((t) => pattern.test(t)), { timeout: 120_000 })
+    .toBe(true);
+  const value = await select.evaluate(
+    (s: HTMLSelectElement, src: string) => [...s.options].find((o) => new RegExp(src).test(o.text))!.value,
+    pattern.source,
+  );
+  await select.selectOption(value);
+}
+
+async function openSession(page: Page, year: string, gp: RegExp, session: RegExp, a: RegExp, b: RegExp) {
+  await page.goto("/");
+  await choose(page, "Season", new RegExp(`^${year}`));
+  await choose(page, "Grand Prix", gp);
+  await choose(page, "Session", session);
+  await choose(page, "Driver A", a);
+  await choose(page, "Driver B", b);
+}
+
+function collectErrors(page: Page) {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(`pageerror: ${e.message}`));
+  page.on("console", (m) => m.type() === "error" && errors.push(`console: ${m.text()}`));
+  page.on("response", (r) => r.status() >= 400 && errors.push(`${r.status()} ${r.url()}`));
+  return errors;
+}
+
+test("defaults to full-data seasons and can show limited ones", async ({ page }) => {
+  await page.goto("/");
+  const seasons = field(page, "Season");
+  await expect.poll(async () => (await seasons.locator("option").allTextContents()).length).toBeGreaterThan(0);
+  const before = await seasons.locator("option").allTextContents();
+  expect(before.some((t) => t.includes("limited"))).toBe(false);
+  expect(before.some((t) => t.startsWith("2023"))).toBe(true);
+  await page.getByLabel("show limited-data seasons").check();
+  await expect.poll(async () => (await seasons.locator("option").allTextContents()).some((t) => t.startsWith("2019"))).toBe(true);
+});
+
+test("race: every tab renders without errors", async ({ page }) => {
+  const errors = collectErrors(page);
+  await openSession(page, "2024", /Italian/, /^Race/, /^LEC/, /^PIA/);
+
+  await expect(page.locator(".uplot").first()).toBeVisible();
+  await expect(page.getByText("Corner-by-corner")).toBeVisible();
+  await expect(page.locator("table").first()).toBeVisible();
+
+  const tabs: [string, string][] = [
+    ["Lap overlay", "Brake point, minimum speed"],
+    ["Tyre degradation", "Session-wide model (Model B)"],
+    ["Driving style", "Line length through each corner"],
+    ["Pace vs preservation", "Behaviour pattern by corner zone"],
+    ["Strategy", "Cross-compound pace at equal"],
+  ];
+  for (const [tab, marker] of tabs) {
+    await page.getByRole("button", { name: tab, exact: true }).click();
+    await expect(page.getByText(marker).first()).toBeVisible();
+  }
+  expect(errors).toEqual([]);
+});
+
+test("qualifying disables tyre-age and strategy tabs", async ({ page }) => {
+  await openSession(page, "2024", /Italian/, /^Qualifying/, /^LEC/, /^PIA/);
+  for (const tab of ["Tyre degradation", "Pace vs preservation", "Strategy"]) {
+    await expect(page.getByRole("button", { name: tab, exact: true })).toBeDisabled();
+  }
+  for (const tab of ["Lap comparison", "Lap overlay", "Driving style"]) {
+    await expect(page.getByRole("button", { name: tab, exact: true })).toBeEnabled();
+  }
+});
+
+test("practice: long runs are analysed and strategy is disabled", async ({ page }) => {
+  const errors = collectErrors(page);
+  await openSession(page, "2024", /Italian/, /^Practice 2/, /^LEC/, /^PIA/);
+  await expect(page.getByRole("button", { name: "Strategy", exact: true })).toBeDisabled();
+  await page.getByRole("button", { name: "Tyre degradation", exact: true }).click();
+  await expect(page.getByText("Long runs, whole field")).toBeVisible();
+  await expect(page.getByText("Long-run laps only")).toBeVisible();
+  expect(errors).toEqual([]);
+});

@@ -37,12 +37,17 @@ choice, or an engineering gap. Update this file when a limitation is removed or 
 
 ## 3. Lap classification
 15. **SC/VSC/red windows are reconstructed heuristically** from race-control messages (SC ends one typical lap after
-    "IN THIS LAP", VSC 20 s after "ENDING", red one lap after the next green). Laps at the boundaries can be mis-flagged.
+    "IN THIS LAP", VSC 20 s after "ENDING", red one lap after the next green or `SESSION STARTED`). Laps at the
+    boundaries can be mis-flagged. (Fixed: restarts after a red flag are signalled by `SESSION STARTED`, not a green
+    flag; Monaco and Suzuka 2024 previously marked almost every lap as red-flag.)
 16. **Traffic now uses every car's on-track position** (racing cars, backmarkers, blue flags). The first time a session
     is opened it needs a background download (~20 requests, ~30–60 s). Until then the classification-interval fallback
     is used, which can't see backmarkers. Gaps are converted with the car's own speed, so they're approximate (±0.5 s
     against OpenF1 intervals). It doesn't capture dirty-air effects beyond 1.5 s or the car behind except for blue flags.
-    (Fixed: OpenF1 reports the leader's interval as 0, which used to flag every lap led as traffic.)
+    (Fixed: OpenF1 reports the leader's interval as 0, which used to flag every lap led as traffic. Fixed: retired
+    cars keep reporting a frozen position, so stationary cars are now ignored.) Validated against the official
+    blue-flag log on Monza, Monaco and Suzuka 2024: 96–100% of blue-flag laps detected as "being lapped", and
+    95–100% of detections confirmed by a blue flag within ±1 lap.
 17. **Yellow flags aren't mapped to track position**: any yellow anywhere during the lap soft-flags it.
 18. **The outlier filter (5 × MAD per stint) doesn't detect car problems**: damage or engine issues (e.g. LEC, Bahrain
     2019) stay in the data and look like "degradation".
@@ -93,9 +98,12 @@ choice, or an engineering gap. Update this file when a limitation is removed or 
     `.venv` and `data/`.
 38. **Dark theme only, desktop layout only.** There are no data-table alternatives for most charts, and Plotly adds ~3.5 MB.
 39. **DuckDB is installed but unused** (Parquet is read with pandas).
-40. **No automated UI tests in the repo** (Playwright checks were run ad hoc). Backend has 17 offline unit tests.
-41. **Limited sessions verified by hand**: 2024 Monza race and qualifying, 2023 Monza and Australia, 2026 São Paulo,
-    2019 Bahrain. Street circuits, Suzuka's crossover, sprint sessions and red-flag restarts haven't been visually checked.
+40. **Tests**: 20 offline backend unit tests and 4 end-to-end browser tests (`frontend/e2e`, Playwright on installed
+    Edge). The e2e tests use real cached data for 2024 Monza, so the first run on a fresh machine downloads it.
+41. **Sessions verified**: 2024 Monza (race, qualifying, FP2), Monaco, Suzuka, Las Vegas and the Austria sprint;
+    2023 Monza and Australia; 2026 São Paulo and Mexico FP2; 2019 Bahrain. On these, trace lap times are within ~0.1 s
+    of official, MultiViewer corners matched, and finishing orders were correct. Suzuka's crossover caused no
+    projection jumps (lateral p99 < 0.7 m). Wet races and the 2026 sprint format haven't been checked.
 42. **Live sessions are out of scope.** Practice sessions are supported (2023+) with these limits:
     - **Fuel loads, engine modes and run plans are unknown** and differ between teams, so long-run pace order is not a
       race-pace ranking, and Model B and strategy don't run for practice.
