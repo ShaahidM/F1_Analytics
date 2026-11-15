@@ -7,7 +7,9 @@
   --bg: #121211;
   --surface-1: #1a1a19;
   --surface-2: #232321;
+  --surface-3: #2b2b28;
   --border: #33332f;
+  --border-strong: #46463f;
   --grid: #2b2b28;
   --text-primary: #f0efec;
   --text-secondary: #c3c2b7;
@@ -15,19 +17,25 @@
   --driver-a: #3987e5;
   --driver-b: #d95926;
   --warn: #fab219;
+  --focus: #6da7ec;
+  --brand: #e10600; /* logo mark only; never used for data */
 }
 
 @theme inline {
   --color-bg: var(--bg);
   --color-surface-1: var(--surface-1);
   --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
   --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
   --color-ink: var(--text-primary);
   --color-ink-2: var(--text-secondary);
   --color-ink-3: var(--text-muted);
   --color-driver-a: var(--driver-a);
   --color-driver-b: var(--driver-b);
   --color-warn: var(--warn);
+  --color-focus: var(--focus);
+  --color-brand: var(--brand);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -36,20 +44,63 @@ body {
   background: var(--bg);
   color: var(--text-primary);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-feature-settings: "tnum" 1; /* tabular numbers: columns of times line up */
 }
 
 select,
-input {
-  background: var(--surface-2);
+input[type="number"],
+input[type="text"] {
+  background-color: var(--surface-2);
   border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 4px 8px;
+  border-radius: 6px;
+  padding: 5px 8px;
   color: var(--text-primary);
   font-size: 13px;
+  transition: border-color 120ms;
+}
+select {
+  appearance: none;
+  padding-right: 28px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%238a8984' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+select:hover:not(:disabled),
+input:hover:not(:disabled) {
+  border-color: var(--border-strong);
 }
 select:disabled,
 input:disabled {
   opacity: 0.45;
+}
+input[type="checkbox"],
+input[type="range"] {
+  accent-color: var(--text-secondary);
+}
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+@layer components {
+  .card {
+    @apply rounded-lg border border-border bg-surface-1;
+  }
+  .btn {
+    @apply inline-flex items-center gap-1.5 rounded-md border border-border bg-surface-2 px-3 py-1.5 text-xs font-medium text-ink-2 transition-colors hover:border-border-strong hover:text-ink disabled:cursor-not-allowed disabled:opacity-40;
+  }
+  .btn-primary {
+    @apply border-ink bg-ink text-bg hover:border-ink-2 hover:bg-ink-2 hover:text-bg;
+  }
+  .eyebrow {
+    @apply text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-3;
+  }
+}
+
+/* Thin, quiet scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
 }
 
 /* uPlot on the dark surface */
@@ -63,4 +114,10 @@ input:disabled {
 }
 .u-legend .u-marker {
   border-radius: 2px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }

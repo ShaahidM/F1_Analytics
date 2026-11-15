@@ -51,6 +51,25 @@ def _combo(res, names: list[str]) -> tuple[float, float, float]:
     return est, est - z * se, est + z * se
 
 
+WET_COMPOUNDS = {"INTERMEDIATE", "WET"}
+RAIN_SHARE_MIXED = 0.05
+
+
+def session_conditions(laps: pd.DataFrame, weather: pd.DataFrame | None) -> str:
+    """"wet" if most clean laps are on inters/wets, "mixed" if any are or it rained during the session, else "dry".
+    2024 São Paulo (all inters, rain in 58% of weather samples) gave a nonsense −0.12 s/lap inter "degradation"."""
+    clean = laps[laps["clean"]] if "clean" in laps else laps
+    wet_share = float(clean["compound"].isin(WET_COMPOUNDS).mean()) if len(clean) else 0.0
+    rain_share = 0.0
+    if weather is not None and not weather.empty and "rainfall" in weather:
+        rain_share = float((pd.to_numeric(weather["rainfall"], errors="coerce").fillna(0) > 0).mean())
+    if wet_share > 0.5:
+        return "wet"
+    if wet_share > 0 or rain_share > RAIN_SHARE_MIXED:
+        return "mixed"
+    return "dry"
+
+
 def fit_session_model(laps: pd.DataFrame, a: int, b: int, include_flagged: bool, weather: pd.DataFrame | None) -> dict:
     df = laps[laps["clean"] & laps["tyre_age"].notna() & laps["lap_time_s"].notna()].copy()
     if not include_flagged:
@@ -141,8 +160,13 @@ def fit_session_model(laps: pd.DataFrame, a: int, b: int, include_flagged: bool,
             warnings.append(f"Car {d} ran a single stint: its tyre slope relies entirely on the field-wide γ")
     if (df["compound"] == "UNKNOWN").any():
         warnings.append("Compound unknown for this season: all laps treated as one compound; tyre age inferred from pit stops")
+    conditions = session_conditions(laps, weather)
+    if conditions != "dry":
+        warnings.insert(0, f"{conditions.capitalize()} conditions: a changing, drying or wetting track dominates lap times, "
+                           "so the tyre-age effects here are not interpretable as degradation")
     return {
         "ok": True,
+        "conditions": conditions,
         "ci_level": CI_LEVEL,
         "n_laps": int(res.nobs),
         "n_drivers": int(df["driver"].nunique()),

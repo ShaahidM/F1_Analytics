@@ -37,7 +37,7 @@ export function LongRuns({ sessionId, slots, includeFlagged }: { sessionId: stri
   };
 
   return (
-    <section className="overflow-x-auto rounded border border-border bg-surface-1">
+    <section className="overflow-x-auto card">
       <h3 className="flex flex-wrap items-center gap-2 px-2 pt-2 text-xs font-semibold">
         Long runs, whole field <Badge tier="C" note="Runs of 5+ laps within ±2.5% of the run's median pace on one tyre set, with at least 3 consecutive laps" />
       </h3>

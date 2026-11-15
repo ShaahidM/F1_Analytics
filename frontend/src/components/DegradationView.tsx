@@ -90,7 +90,7 @@ export function DegradationView({ sessionId, slots, practice = false }: { sessio
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-4 rounded border border-border bg-surface-1 px-3 py-2 text-xs text-ink-2">
+      <div className="flex flex-wrap items-center gap-4 card px-3 py-2 text-xs text-ink-2">
         <label className="flex items-center gap-2">
           <input type="checkbox" checked={includeFlagged} onChange={(e) => setIncludeFlagged(e.target.checked)} />
           Include laps flagged for traffic (within 1.5 s of a car or backmarker on track, or being lapped) or yellow flags (hollow markers)
@@ -114,12 +114,12 @@ export function DegradationView({ sessionId, slots, practice = false }: { sessio
       )}
 
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
-        <section className="rounded border border-border bg-surface-1 p-2">
+        <section className="card p-2">
           <h3 className="flex items-center gap-2 px-1 text-xs font-semibold">Lap time vs lap number <Badge tier="M" /></h3>
           <Plot height={380} data={charts.byLap} layout={{ margin: { l: 56, r: 12, t: 28, b: 110 }, legend: { orientation: "h", y: -0.32, font: { size: 10 } }, xaxis: { title: { text: "Lap" } }, yaxis: { title: { text: "Lap time (s)" } }, shapes: charts.shapes }} />
           <p className="px-1 text-[10px] text-ink-3">Colour = driver, shape = compound (● soft ■ medium ◆ hard ▲ inter ▼ wet). Dotted lines = pit stops.</p>
         </section>
-        <section className="rounded border border-border bg-surface-1 p-2">
+        <section className="card p-2">
           <h3 className="flex items-center gap-2 px-1 text-xs font-semibold">
             Lap time vs tyre age, per-stint trend <Badge tier="E" note={`Theil–Sen robust slope with ${q.data.ci_level * 100}% CI`} />
           </h3>
@@ -132,7 +132,7 @@ export function DegradationView({ sessionId, slots, practice = false }: { sessio
       </div>
 
       {hasSectors && (
-        <section className="rounded border border-border bg-surface-1 p-2">
+        <section className="card p-2">
           <h3 className="flex items-center gap-2 px-1 text-xs font-semibold">Sector times vs tyre age <Badge tier="M" /></h3>
           <div className="grid grid-cols-1 gap-2 lg:grid-cols-3">
             {(["s1_s", "s2_s", "s3_s"] as const).map((k, i) => (
@@ -158,7 +158,7 @@ export function DegradationView({ sessionId, slots, practice = false }: { sessio
 function StintTable({ stints, slots, fuel }: { stints: StintTrend[]; slots: Slot[]; fuel: number }) {
   const slotOf = (d: number) => slots.find((s) => s.driver === d)!;
   return (
-    <section className="overflow-x-auto rounded border border-border bg-surface-1">
+    <section className="overflow-x-auto card">
       <table className="w-full text-[11px]">
         <thead className="text-left text-ink-3">
           <tr className="border-b border-border">

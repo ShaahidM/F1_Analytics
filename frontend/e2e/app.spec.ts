@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
-// The selection fields wrap their <select> in a <label> whose first <span> is the field name.
-const field = (page: Page, name: string) => page.locator(`label:has(> span:text-is("${name}")) select`);
+// Selection fields carry a stable data-field hook (their visible labels include step numbers).
+const field = (page: Page, name: string) => page.locator(`label[data-field="${name}"] select`);
 
 async function choose(page: Page, name: string, pattern: RegExp) {
   const select = field(page, name);
@@ -83,4 +83,24 @@ test("practice: long runs are analysed and strategy is disabled", async ({ page 
   await expect(page.getByText("Long runs, whole field")).toBeVisible();
   await expect(page.getByText("Long-run laps only")).toBeVisible();
   expect(errors).toEqual([]);
+});
+
+test("welcome screen loads the example session", async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: /Load example/ }).click();
+  await expect(page.getByRole("heading", { name: "Italian Grand Prix" })).toBeVisible();
+  await expect(page.locator(".uplot").first()).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test("season comparison starts and reports progress or results", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("tab", { name: "Season comparison" }).click();
+  await field(page, "Season").selectOption("2024");
+  await expect.poll(async () => (await field(page, "Driver A").locator("option").count()), { timeout: 300_000 }).toBeGreaterThan(2);
+  await field(page, "Driver A").selectOption("LEC");
+  await field(page, "Driver B").selectOption("SAI");
+  await page.getByRole("button", { name: "Compare season" }).click();
+  await expect(page.getByText(/Analysing races|Season scorecard/).first()).toBeVisible();
 });

@@ -83,7 +83,7 @@ export function LapOverlay({ sessionId, slots, track, initial }: {
 
   return (
     <div ref={wrap} className="flex flex-col gap-2">
-      <div className="flex flex-wrap gap-4 rounded border border-border bg-surface-1 px-3 py-2 text-xs">
+      <div className="flex flex-wrap gap-4 card px-3 py-2 text-xs">
         {slots.map((s) => (
           <div key={s.slot} className="flex flex-wrap items-center gap-2">
             <span className="font-semibold" style={{ color: `var(--driver-${s.slot})` }}>{s.label}</span>
@@ -153,7 +153,7 @@ function BrakePointTable({ track, colored, results }: {
 }) {
   const braking = track.zones.filter((z) => z.kind === "braking");
   return (
-    <section className="overflow-x-auto rounded border border-border bg-surface-1">
+    <section className="overflow-x-auto card">
       <h3 className="flex items-center gap-2 px-2 pt-2 text-xs font-semibold">
         Brake point, minimum speed and zone time per lap <Badge tier="C" note="Brake point = metres before the reference apex, ± half the raw sample spacing" />
       </h3>

@@ -5,15 +5,19 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useStore } from "@/lib/store";
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, step, children }: { label: string; step: number; children: React.ReactNode }) {
   return (
-    <label className="flex flex-col gap-1">
-      <span className="text-[10px] uppercase tracking-wider text-ink-3">{label}</span>
+    <label className="flex flex-col gap-1" data-field={label}>
+      <span className="eyebrow">
+        <span aria-hidden className="mr-1 text-ink-3/70">{step}</span>
+        {label}
+      </span>
       {children}
     </label>
   );
 }
 
+/** Year → Grand Prix → session → two drivers. Every list comes from the API. */
 export function SelectionBar() {
   const { year, sessionId, driverA, driverB, setYear, setSession, setDrivers } = useStore();
 
@@ -33,29 +37,24 @@ export function SelectionBar() {
   const drivers = session.data?.drivers ?? [];
 
   return (
-    <div className="flex flex-wrap items-end gap-4 border-b border-border bg-surface-1 px-4 py-3">
-      <div className="mr-4">
-        <div className="text-sm font-semibold tracking-wide">F1 Telemetry Lab</div>
-        <div className="text-[10px] text-ink-3">two-driver performance &amp; tyre analysis</div>
-      </div>
-
+    <div className="flex flex-wrap items-start gap-x-5 gap-y-3 border-b border-border bg-surface-1/60 px-5 py-3">
       <div className="flex flex-col gap-1">
-        <Field label="Season">
-          <select value={year ?? ""} onChange={(e) => setYear(Number(e.target.value))}>
+        <Field label="Season" step={1}>
+          <select className="w-28" value={year ?? ""} onChange={(e) => setYear(Number(e.target.value))}>
             {visible.map((s) => (
               <option key={s.year} value={s.year}>
-                {s.year} {s.limited ? "· limited data" : ""}
+                {s.year} {s.limited ? "· limited" : ""}
               </option>
             ))}
           </select>
         </Field>
-        <label className="flex items-center gap-1 text-[10px] text-ink-3" title="Lap times and pit stops only: no telemetry, sectors or compounds">
+        <label className="flex items-center gap-1 text-[10px] text-ink-3" title="2019–22: lap times and pit stops only, no telemetry, sectors or compounds">
           <input type="checkbox" checked={showLimited} onChange={(e) => setShowLimited(e.target.checked)} />
           show limited-data seasons
         </label>
       </div>
 
-      <Field label="Grand Prix">
+      <Field label="Grand Prix" step={2}>
         <select
           className="w-64"
           value={event ? String(event.meeting_key) : ""}
@@ -79,8 +78,9 @@ export function SelectionBar() {
         </select>
       </Field>
 
-      <Field label="Session">
-        <select value={sessionId ?? ""} disabled={!event} onChange={(e) => setSession(e.target.value)}>
+      <Field label="Session" step={3}>
+        <select className="w-40" value={sessionId ?? ""} disabled={!event} onChange={(e) => setSession(e.target.value)}>
+          {!event && <option value="">—</option>}
           {event?.sessions.map((s) => (
             <option key={s.id} value={s.id} disabled={!s.available}>
               {s.session_name}
@@ -89,15 +89,15 @@ export function SelectionBar() {
         </select>
       </Field>
 
-      {(["a", "b"] as const).map((slot) => {
+      {(["a", "b"] as const).map((slot, i) => {
         const value = slot === "a" ? driverA : driverB;
         const other = slot === "a" ? driverB : driverA;
         return (
-          <Field key={slot} label={`Driver ${slot.toUpperCase()}`}>
+          <Field key={slot} label={`Driver ${slot.toUpperCase()}`} step={4 + i}>
             <div className="flex items-center gap-2">
-              <span className="inline-block h-3 w-3 rounded-sm" style={{ background: `var(--driver-${slot})` }} />
+              <span aria-hidden className="inline-block h-3 w-3 rounded-sm" style={{ background: `var(--driver-${slot})` }} />
               <select
-                className="w-52"
+                className="w-56"
                 value={value ?? ""}
                 disabled={!drivers.length}
                 onChange={(e) => {

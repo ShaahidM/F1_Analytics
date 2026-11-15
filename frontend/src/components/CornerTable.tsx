@@ -61,7 +61,7 @@ export function CornerTable({ sessionId, a, b, zones, labels }: {
   const mb = byZone(qb.data.metrics);
 
   return (
-    <div className="overflow-x-auto rounded border border-border bg-surface-1">
+    <div className="overflow-x-auto card">
       <table className="w-full text-[11px]">
         <thead className="text-ink-3">
           <tr className="border-b border-border">

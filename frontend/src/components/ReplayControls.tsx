@@ -53,7 +53,7 @@ export function ReplayControls({ a, b, labels }: { a: Trace; b: Trace; labels: {
   const gap = sA - sB;
 
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded border border-border bg-surface-1 px-3 py-2 text-xs">
+    <div className="flex flex-wrap items-center gap-3 card px-3 py-2 text-xs">
       <button
         onClick={() => {
           if (!playing && (playT === null || playT >= duration)) setPlayT(0);

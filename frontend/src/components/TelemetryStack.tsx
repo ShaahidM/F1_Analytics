@@ -232,7 +232,7 @@ export function ChartBlock({ title, unit, tier, note, readouts, children }: {
   readouts: { label: string; color: string; value: string }[]; children: React.ReactNode;
 }) {
   return (
-    <div className="rounded border border-border bg-surface-1 px-1 pt-1">
+    <div className="card px-1 pt-1">
       <div className="flex items-center justify-between px-1 text-[11px]">
         <span className="flex items-center gap-2">
           <span className="font-semibold text-ink">{title}</span>

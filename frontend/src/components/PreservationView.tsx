@@ -49,7 +49,7 @@ export function PreservationView({ sessionId, slots }: { sessionId: string; slot
   if (!q.data) return null;
   if (!columns.length)
     return (
-      <div className="rounded border border-border bg-surface-1 p-4 text-sm text-ink-2">
+      <div className="card p-4 text-sm text-ink-2">
         No stint has {MIN_STINT_LAPS}+ clean laps on one tyre set, so behaviour can&apos;t be trended against tyre age here.
         Pick a race, or a practice session where both drivers did a long run.
       </div>
@@ -89,7 +89,7 @@ export function PreservationView({ sessionId, slots }: { sessionId: string; slot
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-4 rounded border border-border bg-surface-1 px-3 py-2 text-xs text-ink-2">
+      <div className="flex flex-wrap items-center gap-4 card px-3 py-2 text-xs text-ink-2">
         <label className="flex items-center gap-2">
           <input type="checkbox" checked={includeFlagged} onChange={(e) => setIncludeFlagged(e.target.checked)} />
           Include laps flagged for traffic / yellow flags
@@ -100,7 +100,7 @@ export function PreservationView({ sessionId, slots }: { sessionId: string; slot
         </span>
       </div>
 
-      <section className="overflow-x-auto rounded border border-border bg-surface-1">
+      <section className="overflow-x-auto card">
         <h3 className="flex items-center gap-2 px-2 pt-2 text-xs font-semibold">
           Behaviour pattern by corner zone and stint <Badge tier="I" note="Rule-based label from the indicator trends; it describes what the data is consistent with, never intent or tyre state" />
         </h3>
@@ -143,7 +143,7 @@ export function PreservationView({ sessionId, slots }: { sessionId: string; slot
       </section>
 
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
-        <section className="rounded border border-border bg-surface-1 p-2">
+        <section className="card p-2">
           <div className="flex flex-wrap items-center gap-2 px-1 text-xs">
             <span className="font-semibold">Indicator vs tyre age</span>
             <select value={indicator} onChange={(e) => setIndicator(e.target.value)}>
@@ -162,7 +162,7 @@ export function PreservationView({ sessionId, slots }: { sessionId: string; slot
             tend to move later and speeds rise as a stint goes on; that has to be weighed against any tyre effect.
           </p>
         </section>
-        <section className="rounded border border-border bg-surface-1 p-2">
+        <section className="card p-2">
           <h3 className="flex items-center gap-2 px-1 text-xs font-semibold">
             Where time is lost as tyres age <Badge tier="E" note="Theil–Sen slope of time-in-zone vs tyre age × 10, with 90% CI" />
           </h3>
@@ -175,7 +175,7 @@ export function PreservationView({ sessionId, slots }: { sessionId: string; slot
         </section>
       </div>
 
-      <section className="overflow-x-auto rounded border border-border bg-surface-1">
+      <section className="overflow-x-auto card">
         <h3 className="flex items-center gap-2 px-2 pt-2 text-xs font-semibold">
           {ind[indicator]?.label}: change per 10 laps, all zones <Badge tier="E" />
         </h3>
@@ -211,7 +211,7 @@ export function PreservationView({ sessionId, slots }: { sessionId: string; slot
         </p>
       </section>
 
-      <section className="overflow-x-auto rounded border border-border bg-surface-1">
+      <section className="overflow-x-auto card">
         <h3 className="flex items-center gap-2 px-2 pt-2 text-xs font-semibold">Whole-lap behaviour trends (per 10 laps) <Badge tier="E" /></h3>
         <table className="w-full text-[11px]">
           <thead className="text-left text-ink-3">
@@ -244,7 +244,7 @@ export function PreservationView({ sessionId, slots }: { sessionId: string; slot
         </table>
       </section>
 
-      <section className="rounded border border-border bg-surface-1 px-3 py-2 text-[11px] text-ink-2">
+      <section className="card px-3 py-2 text-[11px] text-ink-2">
         <div className="mb-1 font-semibold text-ink">Alternative explanations to weigh before reading any pattern as tyre management</div>
         <ul className="list-disc pl-5">
           {q.data.confounders.map((c) => <li key={c}>{c}</li>)}

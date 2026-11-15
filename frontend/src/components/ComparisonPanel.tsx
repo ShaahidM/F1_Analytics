@@ -88,7 +88,7 @@ export function ComparisonPanel({ codes }: { codes: Record<number, string> }) {
   }
 
   return (
-    <div className="flex flex-col gap-2 border-b border-border bg-surface-1 px-4 py-3">
+    <div className="card flex flex-col gap-2 p-3">
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex overflow-hidden rounded border border-border">
           {MODES.map((m) => (

@@ -49,7 +49,7 @@ export function StrategyView({ sessionId, slots, drivers }: { sessionId: string;
 
   return (
     <div className="flex flex-col gap-3">
-      <section className="rounded border border-border bg-surface-1 p-2">
+      <section className="card p-2">
         <h3 className="flex items-center gap-2 px-1 text-xs font-semibold">Tyre strategy, whole field (finishing order) <Badge tier="M" note="Stints and compounds from the timing feed; 2019–22 stints are inferred from pit stops" /></h3>
         <Plot height={Math.max(260, order.length * 22 + 60)} data={timeline}
           layout={{ barmode: "overlay", xaxis: { title: { text: "Lap" }, range: [0.5, st.total_laps + 0.5] },
@@ -59,7 +59,7 @@ export function StrategyView({ sessionId, slots, drivers }: { sessionId: string;
       </section>
 
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
-        <section className="rounded border border-border bg-surface-1 p-2">
+        <section className="card p-2">
           <h3 className="flex items-center gap-2 px-1 text-xs font-semibold">Gap {b.label} − {a.label} at each lap <Badge tier="C" note={`From ${st.timing_basis}`} /></h3>
           <Plot height={300} data={[{ type: "scatter", mode: "lines+markers", x: st.gap.map((g) => g.lap), y: st.gap.map((g) => g.gap_s),
             line: { color: "#c3c2b7", width: 1.5 }, marker: { size: 3 }, hovertemplate: `L%{x}: ${b.label} %{y:+.2f} s vs ${a.label}<extra></extra>` }]}
@@ -67,7 +67,7 @@ export function StrategyView({ sessionId, slots, drivers }: { sessionId: string;
               shapes: [...(pitShapes ?? []), ...(cycleShapes ?? [])], margin: { l: 56, r: 12, t: 8, b: 40 } }} />
           <p className="px-1 text-[10px] text-ink-3">Positive = {b.label} behind. Dotted lines = pit stops ({a.label} blue, {b.label} orange); shaded = paired pit cycles.</p>
         </section>
-        <section className="rounded border border-border bg-surface-1 p-2">
+        <section className="card p-2">
           <h3 className="flex items-center gap-2 px-1 text-xs font-semibold">Running position <Badge tier="C" note="Rank of line-crossing time among cars completing each lap" /></h3>
           <Plot height={300} data={slots.map((s) => ({ type: "scatter", mode: "lines", name: s.label, line: { color: DRIVER[s.slot], width: 2, shape: "hv" },
             x: (st.positions[String(s.driver)] ?? []).map((p) => p.lap), y: (st.positions[String(s.driver)] ?? []).map((p) => p.position) }))}
@@ -76,7 +76,7 @@ export function StrategyView({ sessionId, slots, drivers }: { sessionId: string;
         </section>
       </div>
 
-      <section className="overflow-x-auto rounded border border-border bg-surface-1">
+      <section className="overflow-x-auto card">
         <h3 className="flex flex-wrap items-center gap-2 px-2 pt-2 text-xs font-semibold">
           Pit stops
           {st.pit_loss_reference && (
@@ -120,7 +120,7 @@ export function StrategyView({ sessionId, slots, drivers }: { sessionId: string;
         </table>
       </section>
 
-      <section className="overflow-x-auto rounded border border-border bg-surface-1">
+      <section className="overflow-x-auto card">
         <h3 className="flex items-center gap-2 px-2 pt-2 text-xs font-semibold">
           Undercut / overcut: paired pit cycles <Badge tier="C" note="Gaps from timing at the end of the lap before the first stop and the lap after the second stop" />
         </h3>
@@ -191,7 +191,7 @@ function CrossCompound({ model, isError, error, slots }: {
       line: { color, width: 2, dash: DASH[c.compound] ?? "solid" }, hovertemplate: `${name}<br>age %{x}: %{y:.3f} s<extra></extra>` });
   }
   return (
-    <section className="rounded border border-border bg-surface-1 p-2">
+    <section className="card p-2">
       <h3 className="flex items-center gap-2 px-1 text-xs font-semibold">
         Cross-compound pace at equal fuel and conditions <Badge tier="E" note="Model B predictions with 90% CI bands" />
       </h3>

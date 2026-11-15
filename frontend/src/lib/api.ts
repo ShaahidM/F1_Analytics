@@ -278,6 +278,39 @@ export type LineResult = {
     halves: number[] | null; replicated: boolean; significant: boolean }[];
 };
 
+export type SeasonDriver = { code: string; full_name: string; teams: string[]; races: number; team_colour: string | null };
+type CoefWithN = Coef & { n_laps?: number };
+export type RaceSummary = {
+  session_id: string;
+  round: number | null;
+  meeting_name: string;
+  location?: string;
+  date?: string | null;
+  status: "ok" | "absent" | "error";
+  message?: string;
+  a_number?: number;
+  b_number?: number;
+  conditions?: "dry" | "mixed" | "wet" | "unknown";
+  finish?: { a: number | null; b: number | null };
+  stops?: { a: number; b: number };
+  pace_gap?: { median_s: number; ci_low: number; ci_high: number; n_laps: number } | null;
+  clean_laps?: { a: number; b: number };
+  model?: { lap_effect: Coef; field: Record<string, Coef>; a: Record<string, CoefWithN>; b: Record<string, CoefWithN>; warnings: string[] } | null;
+  style?: Partial<Record<"a" | "b", Record<string, number | null>>>;
+  patterns?: Partial<Record<"a" | "b", Record<string, number>>>;
+  line?: { significant: { zone: string; diff_m: number }[]; n_zones: number } | null;
+};
+export type SeasonAggregate = { driver: string; metric: string; median: number; mean: number; races: number };
+export type SeasonResult = {
+  state: "running" | "done" | "failed" | "not_started";
+  done?: number;
+  total?: number;
+  current?: string | null;
+  error?: string;
+  races: RaceSummary[];
+  aggregate: SeasonAggregate[];
+};
+
 type Num = number | null;
 
 export type Trace = {
@@ -357,6 +390,9 @@ export const api = {
     get<LineResult>(`/api/sessions/${id}/line`, { drivers: drivers.join(","), include_flagged: String(includeFlagged) }),
   longRuns: (id: string, includeFlagged: boolean) =>
     get<{ ci_level: number; runs: StintTrend[] }>(`/api/sessions/${id}/longruns`, { include_flagged: String(includeFlagged) }),
+  seasonDrivers: (year: number) => get<SeasonDriver[]>(`/api/seasons/${year}/drivers`),
+  seasonCompare: (year: number, a: string, b: string, includeWet: boolean) =>
+    get<SeasonResult>(`/api/seasons/${year}/compare`, { a, b, include_wet: String(includeWet) }),
   compare: (id: string, params: Record<string, string | number | undefined | null>) =>
     get<CompareResult>(`/api/sessions/${id}/compare`, params),
 };

@@ -241,3 +241,30 @@ def long_runs(session_id: str, include_flagged: bool = True):
         r["code"] = code.get(r["driver_number"])
         r["team"] = team.get(r["driver_number"])
     return {"ci_level": CI_LEVEL, "runs": runs}
+
+
+@router.get("/seasons/{year}/drivers")
+def season_drivers(year: int):
+    from app.processing import season
+    try:
+        return season.season_drivers(year)
+    except KeyError:
+        raise HTTPException(404, f"no data source covers {year}")
+
+
+@router.get("/seasons/{year}/compare")
+def season_compare(year: int, a: str, b: str, include_wet: bool = False):
+    """Starts (or reports) the background season comparison for two driver codes; returns races done so far."""
+    from app.processing import season
+    a, b = a.upper(), b.upper()
+    if a == b:
+        raise HTTPException(422, "pick two different drivers")
+    try:
+        if not source_for_season(year).provides_telemetry:
+            raise HTTPException(422, "season comparison needs telemetry seasons (2023+)")
+    except KeyError:
+        raise HTTPException(404, f"no data source covers {year}")
+    st = season.start(year, a, b)
+    races = sorted(st.get("races", []), key=lambda r: r.get("round") or 0)
+    return {**{k: v for k, v in st.items() if k != "races"}, "races": races,
+            "aggregate": season.aggregate(year, a, b, include_wet)}

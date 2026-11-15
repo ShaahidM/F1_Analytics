@@ -24,3 +24,17 @@ npm run dev   # http://localhost:3000
 ```
 
 Downloaded data is cached under `data/` (gitignored, safe to delete).
+
+## What it does
+
+- **Session analysis** (race, sprint, qualifying, practice): lap comparison with animated replay and a
+  corner-by-corner table, lap overlays, tyre degradation with a race-wide model, driving style, pace vs
+  preservation, and strategy (pit stops, undercuts, cross-compound pace).
+- **Season comparison**: the same two drivers race by race across a season, with a scorecard.
+
+## Tests
+
+```bash
+cd backend && .venv/Scripts/python -m pytest -q      # offline unit tests
+cd frontend && npx playwright test                   # end-to-end, uses installed Microsoft Edge
+```

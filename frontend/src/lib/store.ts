@@ -2,6 +2,7 @@ import { create } from "zustand";
 import type { CompareMode } from "./api";
 
 export type ColorBy = "driver" | "speed" | "inputs" | "faster";
+export type View = "session" | "season";
 export type Tab = "compare" | "overlay" | "degradation" | "style" | "preservation" | "strategy";
 
 export type ModeParams = {
@@ -14,6 +15,10 @@ export type ModeParams = {
 };
 
 type State = {
+  view: View;
+  setView: (v: View) => void;
+  /** Jump straight to a session with two drivers (season view links, the welcome example). */
+  openSession: (year: number, sessionId: string, a: number, b: number) => void;
   year: number | null;
   sessionId: string | null;
   driverA: number | null;
@@ -41,6 +46,10 @@ type State = {
 };
 
 export const useStore = create<State>((set) => ({
+  view: "session",
+  setView: (view) => set({ view }),
+  openSession: (year, sessionId, driverA, driverB) =>
+    set({ view: "session", year, sessionId, driverA, driverB, params: {}, xRange: null, playT: null, tab: "compare" }),
   year: null,
   sessionId: null,
   driverA: null,

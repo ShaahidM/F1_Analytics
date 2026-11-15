@@ -273,7 +273,7 @@ export function TrackMap({ track, a, b, labels }: { track: Track; a?: Trace; b?:
         <Legend colorBy={colorBy} speedRange={speedRange} labels={labels} />
       </div>
 
-      <div ref={wrapRef} className="relative rounded border border-border bg-surface-1">
+      <div ref={wrapRef} className="relative card">
         <canvas ref={canvasRef} style={{ width: size.w, height: size.h, cursor: "crosshair" }} onMouseMove={onMove} />
         <div className="pointer-events-none absolute left-2 top-2 text-[10px] text-ink-3">scroll to zoom · drag to pan</div>
       </div>

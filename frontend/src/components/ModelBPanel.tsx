@@ -43,7 +43,7 @@ export function ModelBPanel({ sessionId, slots, includeFlagged }: { sessionId: s
   }));
 
   return (
-    <section className="rounded border border-border bg-surface-1 p-2">
+    <section className="card p-2">
       <h3 className="flex flex-wrap items-center gap-2 px-1 text-xs font-semibold">
         Session-wide model (Model B): tyre-age effect with fuel and track evolution separated
         <Badge tier="E" note={`OLS with driver fixed effects, HC3 robust SE, ${m.ci_level * 100}% CI`} />

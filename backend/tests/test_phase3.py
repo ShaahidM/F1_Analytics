@@ -66,3 +66,34 @@ def test_model_b_recovers_fuel_and_tyre_effects():
     assert abs(res["field_tyre_slopes"]["MEDIUM"]["estimate"] - 0.08) < 0.01
     a_hard = res["driver_tyre_slopes"]["A"]["compounds"]["HARD"]
     assert a_hard["ci_low"] < 0.07 < a_hard["ci_high"]
+
+
+def test_session_conditions():
+    from app.analysis.model import session_conditions
+
+    dry = pd.DataFrame({"clean": True, "compound": ["MEDIUM"] * 10})
+    inters = pd.DataFrame({"clean": True, "compound": ["INTERMEDIATE"] * 8 + ["MEDIUM"] * 2})
+    rain = pd.DataFrame({"rainfall": [0] * 8 + [1] * 2})
+    assert session_conditions(dry, None) == "dry"
+    assert session_conditions(dry, rain) == "mixed"
+    assert session_conditions(inters, None) == "wet"
+
+
+def test_season_metric_rows_and_duckdb_aggregate(tmp_path, monkeypatch):
+    from app.processing import season
+
+    monkeypatch.setattr(season, "SEASON_DIR", tmp_path)
+    for i, (cond, coast) in enumerate((("dry", 10.0), ("dry", 30.0), ("wet", 500.0)), start=1):
+        summary = {"session_id": f"of-{i}", "round": i, "conditions": cond, "status": "ok",
+                   "style": {"a": {"coast_m": coast}, "b": {"coast_m": 2 * coast}},
+                   "model": {"a": {"HARD": {"estimate": 0.05}}, "b": {"HARD": {"estimate": 0.03}}},
+                   "patterns": {"a": {"consistent_with_management": 1, "consistent_with_grip_loss": 3}},
+                   "pace_gap": {"median_s": 0.2}}
+        season._store(2024, "AAA", "BBB", summary)
+    agg = {(r["driver"], r["metric"]): r for r in season.aggregate(2024, "AAA", "BBB", include_wet=False)}
+    assert agg[("AAA", "coast_m")]["median"] == 20.0 and agg[("AAA", "coast_m")]["races"] == 2
+    assert agg[("BBB", "coast_m")]["median"] == 40.0
+    assert agg[("AAA", "management_share")]["median"] == 0.25
+    assert agg[("BBB", "pace_gap_vs_a")]["races"] == 2
+    wet = {(r["driver"], r["metric"]): r for r in season.aggregate(2024, "AAA", "BBB", include_wet=True)}
+    assert wet[("AAA", "coast_m")]["races"] == 3

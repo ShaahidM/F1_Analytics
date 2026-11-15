@@ -57,7 +57,7 @@ export function StyleView({ sessionId, slots }: { sessionId: string; slots: Slot
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-4 rounded border border-border bg-surface-1 px-3 py-2 text-xs text-ink-2">
+      <div className="flex flex-wrap items-center gap-4 card px-3 py-2 text-xs text-ink-2">
         <label className="flex items-center gap-2">
           <input type="checkbox" checked={includeFlagged} onChange={(e) => setIncludeFlagged(e.target.checked)} />
           Include laps flagged for traffic / yellow flags
@@ -87,7 +87,7 @@ export function StyleView({ sessionId, slots }: { sessionId: string; slots: Slot
       </p>
 
       {GROUPS.map((g) => (
-        <section key={g.title} className="rounded border border-border bg-surface-1 p-2">
+        <section key={g.title} className="card p-2">
           <h3 className="px-1 text-xs font-semibold uppercase tracking-wider text-ink-3">{g.title}</h3>
           <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-4">
             {g.keys.map((k) => {
@@ -148,7 +148,7 @@ function LineSection({ sessionId, slots, includeFlagged }: { sessionId: string; 
     hovertemplate: "%{y}: %{x:+.1f} m<extra></extra>",
   }];
   return (
-    <section className="rounded border border-border bg-surface-1 p-2">
+    <section className="card p-2">
       <h3 className="flex flex-wrap items-center gap-2 px-1 text-xs font-semibold">
         Line length through each corner (experimental)
         <Badge tier="E" note="Distance driven from wheel speed minus track distance, averaged over all clean laps; 95% CI" />

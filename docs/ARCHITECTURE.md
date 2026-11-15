@@ -83,6 +83,16 @@ request → registry picks source → storage.cache hit? → else source fetch (
 - Catalog responses (seasons, sessions) are cached with a TTL for the current season and permanently for past seasons.
 - Every API response carries `provenance` (source, evidence tier) and `capabilities`.
 
+## Season comparison (`processing/season.py`)
+
+Two drivers are chosen by **code** (car numbers change between seasons). A background job walks every finished
+Grand Prix of the season and builds a per-race summary with the same session-level code (Model B tyre slopes, a
+paired like-for-like pace gap, style medians, preservation pattern counts, line-length significant zones).
+Each summary is cached as JSON (for the UI) and a long-format Parquet of metrics; the season scorecard is a DuckDB
+query over `data/season/{year}/{A}_{B}/*.parquet` (median per driver × metric, dry races only unless asked).
+Cost: ~13 OpenF1 requests per race (~300 per season, 10–15 min cold at the free limit); traffic uses the
+classification-interval fallback to avoid ~500 extra requests.
+
 ## Comparison modes
 
 `same_lap` | `same_tyre_age` | `fastest` | `custom`. Each returns a `comparability` object listing the differences

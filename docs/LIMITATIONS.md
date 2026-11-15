@@ -116,3 +116,14 @@ choice, or an engineering gap. Update this file when a limitation is removed or 
 43. **2019–2022 is hidden by default** (a switch shows it): those seasons support lap times, degradation trends and
     strategy only.
 44. **Tyre-age views (degradation, pace vs preservation, strategy) are disabled for qualifying**: 1–3 push laps per set.
+45. **Wet and drying races**: the tyre-age models can't separate tyre wear from a changing track (2024 São Paulo gave
+    inters a nonsense −0.12 s/lap "degradation"). Races are classified dry/mixed/wet from rainfall and wet-tyre
+    usage; Model B warns on mixed/wet, and season figures use dry races only by default.
+46. **Season comparison**:
+    - The first run for a pair takes 10–15 min (≈ 300 requests); results are cached per race.
+    - Traffic uses the classification-interval fallback (no backmarker detection) to keep the request count down.
+    - Season medians treat every race equally regardless of how many clean laps it had; per-race intervals aren't
+      propagated into the season figure.
+    - Car and set-up changes through a season, and circuit character, affect every metric. Teammates are the
+      fairest comparison.
+    - Sprints aren't included; a driver who missed a race simply has no row for it.
