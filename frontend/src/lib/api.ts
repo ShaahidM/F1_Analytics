@@ -26,7 +26,7 @@ export type SessionRef = {
   circuit_key: number | null;
   circuit_name: string;
   session_name: string;
-  session_type: "Race" | "Qualifying";
+  session_type: "Race" | "Qualifying" | "Practice";
   date_start: string | null;
   date_end: string | null;
   available: boolean;
@@ -40,7 +40,7 @@ export type GPEvent = {
   meeting_name: string;
   country: string;
   location: string;
-  round: number;
+  round: number | null;
   date_start: string | null;
   sessions: SessionRef[];
 };
@@ -152,6 +152,9 @@ export type StintTrend = {
   tyre_age_assumed: boolean;
   n_laps: number;
   n_used: number;
+  median_lap_s: number | null;
+  code?: string | null;
+  team?: string | null;
   raw_trend: Fit | null;
   fuel_corrected_trend: Fit | null;
   sector_trends: Partial<Record<"s1_s" | "s2_s" | "s3_s", Fit | null>>;
@@ -352,6 +355,8 @@ export const api = {
   traffic: (id: string) => get<{ state: string; done: number; total: number }>(`/api/sessions/${id}/traffic`),
   line: (id: string, drivers: number[], includeFlagged: boolean) =>
     get<LineResult>(`/api/sessions/${id}/line`, { drivers: drivers.join(","), include_flagged: String(includeFlagged) }),
+  longRuns: (id: string, includeFlagged: boolean) =>
+    get<{ ci_level: number; runs: StintTrend[] }>(`/api/sessions/${id}/longruns`, { include_flagged: String(includeFlagged) }),
   compare: (id: string, params: Record<string, string | number | undefined | null>) =>
     get<CompareResult>(`/api/sessions/${id}/compare`, params),
 };

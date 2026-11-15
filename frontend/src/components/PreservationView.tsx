@@ -51,7 +51,7 @@ export function PreservationView({ sessionId, slots }: { sessionId: string; slot
     return (
       <div className="rounded border border-border bg-surface-1 p-4 text-sm text-ink-2">
         No stint has {MIN_STINT_LAPS}+ clean laps on one tyre set, so behaviour can&apos;t be trended against tyre age here.
-        This is normal for qualifying (1–3 push laps per set). Use a race session.
+        Pick a race, or a practice session where both drivers did a long run.
       </div>
     );
   const ind = q.data.indicators;

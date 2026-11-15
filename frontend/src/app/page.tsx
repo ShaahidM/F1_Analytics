@@ -16,14 +16,14 @@ import { TrafficStatus } from "@/components/TrafficStatus";
 import { api } from "@/lib/api";
 import { useStore, type Tab } from "@/lib/store";
 
-// racesOnly: tyre-age trends and strategy need long runs on one set, which qualifying doesn't have.
-const TABS: { id: Tab; label: string; needsTelemetry: boolean; racesOnly: boolean }[] = [
-  { id: "compare", label: "Lap comparison", needsTelemetry: true, racesOnly: false },
-  { id: "overlay", label: "Lap overlay", needsTelemetry: true, racesOnly: false },
-  { id: "degradation", label: "Tyre degradation", needsTelemetry: false, racesOnly: true },
-  { id: "style", label: "Driving style", needsTelemetry: true, racesOnly: false },
-  { id: "preservation", label: "Pace vs preservation", needsTelemetry: true, racesOnly: true },
-  { id: "strategy", label: "Strategy", needsTelemetry: false, racesOnly: true },
+// needs: "longRuns" = races, sprints and practice (qualifying has only 1–3 push laps per set); "race" = races and sprints.
+const TABS: { id: Tab; label: string; needsTelemetry: boolean; needs: "any" | "longRuns" | "race" }[] = [
+  { id: "compare", label: "Lap comparison", needsTelemetry: true, needs: "any" },
+  { id: "overlay", label: "Lap overlay", needsTelemetry: true, needs: "any" },
+  { id: "degradation", label: "Tyre degradation", needsTelemetry: false, needs: "longRuns" },
+  { id: "style", label: "Driving style", needsTelemetry: true, needs: "any" },
+  { id: "preservation", label: "Pace vs preservation", needsTelemetry: true, needs: "longRuns" },
+  { id: "strategy", label: "Strategy", needsTelemetry: false, needs: "race" },
 ];
 
 export default function Home() {
@@ -31,10 +31,11 @@ export default function Home() {
   const session = useQuery({ queryKey: ["session", sessionId], queryFn: () => api.session(sessionId!), enabled: !!sessionId });
   const caps = session.data?.capabilities;
   const hasTelemetry = !!caps?.telemetry && !!caps?.position;
-  const isRace = session.data?.session_type === "Race";
+  const kind = session.data?.session_type;
   const disabledReason = (t: (typeof TABS)[number]) =>
     t.needsTelemetry && !hasTelemetry ? "Needs telemetry, which is unavailable for this session"
-      : t.racesOnly && session.data && !isRace ? "Needs a race: qualifying has only 1–3 push laps per tyre set" : null;
+      : t.needs === "longRuns" && kind === "Qualifying" ? "Needs a race or practice long runs: qualifying has only 1–3 push laps per tyre set"
+      : t.needs === "race" && kind && kind !== "Race" ? "Needs a race or sprint" : null;
   const current = TABS.find((t) => t.id === tab)!;
   const activeTab: Tab = caps && disabledReason(current) ? (hasTelemetry ? "compare" : "degradation") : tab;
 
@@ -152,7 +153,7 @@ export default function Home() {
 
       {sessionId && bothDrivers && activeTab === "degradation" && (
         <div className="p-4">
-          <DegradationView sessionId={sessionId} slots={slots} />
+          <DegradationView sessionId={sessionId} slots={slots} practice={kind === "Practice"} />
         </div>
       )}
     </main>

@@ -52,6 +52,15 @@ A lap enters the pace and degradation analysis only if all of these hold, and ev
    finishes, the fallback is the classification `interval` < 1.5 s (leader's interval of 0 treated as missing: fixed bug).
 6. Robust outlier filter: |lap − stint median| > 5 × MAD, flagged and excluded by default.
 
+### Practice sessions: long runs
+In practice, laps enter trend analyses only if they belong to a detected long run (`processing/laps.py::long_run_mask`):
+per driver and tyre set, laps within ±2.5% of the run's median pace (band re-centred once), at least 5 such laps,
+including at least 3 consecutive. Alternating push/cool-down laps never qualify; slow laps before or after the run
+don't disqualify it. Other laps get the exclusion reason "not part of a long run" but stay selectable for lap
+comparison. Fuel loads and engine modes are unknown in practice, so only Model A (per-run trend) is fitted, and
+trends should be compared within a driver or between teammates. Validated on Monza 2024 FP2 (16 drivers' runs),
+Mexico 2026 FP2 (19) and rain-hit Australia 2023 FP2 (2).
+
 ## 4. Degradation model (ESTIMATED)
 
 **Identifiability problem:** within a single stint, tyre age and lap number both go up by 1 each lap, so fuel burn

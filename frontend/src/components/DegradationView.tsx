@@ -8,6 +8,7 @@ import { DRIVER } from "@/lib/colors";
 import { fmtLap } from "@/lib/trace";
 import { Badge } from "./Badge";
 import { CompoundChip } from "./ComparisonPanel";
+import { LongRuns } from "./LongRuns";
 import { ModelBPanel } from "./ModelBPanel";
 import { Plot } from "./Plot";
 
@@ -23,7 +24,7 @@ function fitText(f: Fit | null | undefined) {
   return `${f.slope >= 0 ? "+" : ""}${f.slope.toFixed(3)} s/lap [${f.ci_low.toFixed(3)}, ${f.ci_high.toFixed(3)}]${sig ? "" : " ≈0"}`;
 }
 
-export function DegradationView({ sessionId, slots }: { sessionId: string; slots: Slot[] }) {
+export function DegradationView({ sessionId, slots, practice = false }: { sessionId: string; slots: Slot[]; practice?: boolean }) {
   const [includeFlagged, setIncludeFlagged] = useState(true);
   const [fuel, setFuel] = useState(0);
   const drivers = slots.map((s) => s.driver);
@@ -99,7 +100,11 @@ export function DegradationView({ sessionId, slots }: { sessionId: string; slots
           <input type="range" min={0} max={0.1} step={0.005} value={fuel} onChange={(e) => setFuel(Number(e.target.value))} />
           <span className="w-24 font-mono text-ink">{fuel === 0 ? "off" : `${fuel.toFixed(3)} s/lap`}</span>
         </label>
-        <span className="text-ink-3">Excluded always: SC/VSC/red, pit in/out, lap 1, deleted, outliers (&gt; 5 MAD).</span>
+        <span className="text-ink-3">
+          {practice
+            ? "Long-run laps only: 5+ laps within ±2.5% of the run's median on one tyre set. Push laps, pit laps and red-flag laps are excluded."
+            : "Excluded always: SC/VSC/red, pit in/out, lap 1, deleted, outliers (> 5 MAD)."}
+        </span>
       </div>
 
       {assumed && (
@@ -139,9 +144,13 @@ export function DegradationView({ sessionId, slots }: { sessionId: string; slots
         </section>
       )}
 
-      <StintTable stints={q.data.stints} slots={slots} fuel={fuel} />
+      <StintTable stints={practice ? q.data.stints.filter((s) => s.n_used > 0) : q.data.stints} slots={slots} fuel={fuel} />
 
-      <ModelBPanel sessionId={sessionId} slots={slots} includeFlagged={includeFlagged} />
+      {practice ? (
+        <LongRuns sessionId={sessionId} slots={slots} includeFlagged={includeFlagged} />
+      ) : (
+        <ModelBPanel sessionId={sessionId} slots={slots} includeFlagged={includeFlagged} />
+      )}
     </div>
   );
 }

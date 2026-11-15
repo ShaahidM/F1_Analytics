@@ -14,7 +14,7 @@ from app.sources.base import (
 from app.sources.http import NotFound, http
 from app.storage.cache import cached_frame, parquet_path
 
-COMPETITIVE_TYPES = {"Race", "Qualifying"}
+SESSION_TYPES = {"Race", "Qualifying", "Practice"}
 
 
 def _ts(series: pd.Series) -> pd.Series:
@@ -65,7 +65,7 @@ class OpenF1Source(SessionSource):
         meetings = {m["meeting_key"]: m for m in self._get("meetings", {"year": year}, ttl=ttl)}
         by_meeting: dict[int, list[SessionRef]] = {}
         for row in self._get("sessions", {"year": year}, ttl=ttl):
-            if row.get("session_type") not in COMPETITIVE_TYPES or row.get("is_cancelled"):
+            if row.get("session_type") not in SESSION_TYPES or row.get("is_cancelled"):
                 continue
             by_meeting.setdefault(row["meeting_key"], []).append(self._session_ref(row, meetings.get(row["meeting_key"])))
         events = []
@@ -82,10 +82,14 @@ class OpenF1Source(SessionSource):
                 "sessions": sessions,
             })
         events.sort(key=lambda e: e["date_start"] or pd.Timestamp.max)
-        for i, e in enumerate(events, start=1):
-            e["round"] = i
+        # Only meetings with a race are championship rounds; pre-season testing (practice-only) gets no number.
+        rnd = 0
+        for e in events:
+            is_round = any(s.session_type == "Race" for s in e["sessions"])
+            rnd += is_round
+            e["round"] = rnd if is_round else None
             for s in e["sessions"]:
-                s.round = i
+                s.round = e["round"]
         return events
 
     def session(self, session_id: str) -> SessionRef:
@@ -102,6 +106,12 @@ class OpenF1Source(SessionSource):
             lap_times=True, sectors=True, compounds=True, pit=s.is_race, telemetry=True,
             position=True, weather=True, race_control=True, intervals=s.is_race,
         )
+        if s.session_type == "Practice":
+            caps.notes.append(
+                "Practice session: trend analyses use detected long runs only (5+ laps at consistent pace on one tyre "
+                "set). Fuel loads, engine modes and run plans are unknown and differ between teams, so compare trends "
+                "within a driver or between teammates rather than absolute pace between teams."
+            )
         if s.year >= 2026:
             caps.notes.append(
                 "2026+ regulations: no DRS (field is null); throttle/coasting are strongly affected by energy "

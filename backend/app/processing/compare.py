@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import pandas as pd
 
+from app.processing.laps import NOT_LONG_RUN
+
 MODES = ("fastest", "same_lap", "same_tyre_age", "custom")
 
 
@@ -75,6 +77,8 @@ def comparability(a: pd.Series, b: pd.Series, is_race: bool) -> list[dict]:
                           "message": f"Laps set {minutes:.0f} min apart: track evolution and conditions may differ"})
     for tag, row in (("A", a), ("B", b)):
         for r in row["exclude_reasons"]:
+            if r == NOT_LONG_RUN:  # expected for practice push laps; not a comparability problem
+                continue
             diffs.append({"kind": "lap_status", "message": f"Lap {tag} not clean: {r}"})
         for f in row["flags"]:
             diffs.append({"kind": "lap_flag", "message": f"Lap {tag}: {f}"})

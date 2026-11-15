@@ -77,3 +77,20 @@ def test_stint_trend_recovers_slope_and_fuel_assumption():
     (st,) = stint_trends(laps, [1], include_flagged=False, fuel_s_per_lap=0.06)
     assert abs(st["raw_trend"]["slope"] - 0.05) < 1e-6
     assert abs(st["fuel_corrected_trend"]["slope"] - 0.11) < 1e-6
+
+
+def test_long_run_detection():
+    from app.processing.laps import long_run_mask
+
+    # Stint 1: push / cool-down pattern, 5 push laps (no long run). Stint 2: 8-lap run with one slow lap in the
+    # middle. Stint 3: 6-lap run followed by slow laps at the end of the session (still a long run).
+    t1 = [80.0, 95.0, 80.2, 96.0, 80.1, 95.5, 80.3, 96.2, 80.2]
+    t2 = [85.0, 85.2, 85.1, 91.0, 85.4, 85.6, 85.5, 85.9]
+    t3 = [86.0, 86.1, 86.3, 86.2, 86.5, 86.4, 120.0, 140.0, 130.0, 125.0]
+    n1, n2, n3 = len(t1), len(t2), len(t3)
+    rows = pd.DataFrame({"driver_number": 1, "stint": [1] * n1 + [2] * n2 + [3] * n3, "lap_time_s": t1 + t2 + t3,
+                         "lap_number": range(1, n1 + n2 + n3 + 1)})
+    mask = long_run_mask(rows, np.ones(len(rows), dtype=bool))
+    assert not mask[:n1].any()
+    assert mask[n1:n1 + n2].tolist() == [True, True, True, False, True, True, True, True]
+    assert mask[n1 + n2:].tolist() == [True] * 6 + [False] * 4

@@ -71,7 +71,7 @@ export function SelectionBar() {
             const any = e.sessions.some((s) => s.available);
             return (
               <option key={e.meeting_key} value={String(e.meeting_key)} disabled={!any}>
-                R{e.round} · {e.meeting_name}
+                {e.round === null ? "Test" : `R${e.round}`} · {e.meeting_name}
                 {any ? "" : " (not yet run)"}
               </option>
             );

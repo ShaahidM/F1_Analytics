@@ -15,6 +15,13 @@ from app.sources.base import DataUnavailable, SessionRef, SessionSource
 TRAFFIC_GAP_S = 1.5
 OUTLIER_MADS = 5.0
 QUALI_PUSH_RATIO = 1.07
+# Practice long runs: at least LONG_RUN_MIN_LAPS laps on one tyre set within ±LONG_RUN_BAND of the run's median
+# pace, including LONG_RUN_MIN_STREAK consecutive laps (alternating push/cool-down laps never qualify, while slow
+# laps before or after the run, e.g. at the end of the session, don't disqualify it).
+LONG_RUN_MIN_LAPS = 5
+LONG_RUN_BAND = 0.025
+LONG_RUN_MIN_STREAK = 3
+NOT_LONG_RUN = "not part of a long run"
 EPOCH = pd.Timestamp("1970-01-01", tz="UTC")
 
 
@@ -126,6 +133,32 @@ def build_lap_table(src: SessionSource, s: SessionRef) -> pd.DataFrame:
     return _classify(laps, s)
 
 
+def long_run_mask(rows: pd.DataFrame, eligible: np.ndarray) -> np.ndarray:
+    """True for laps that belong to a detected long run (per driver and tyre set)."""
+    out = np.zeros(len(rows), dtype=bool)
+    grp = rows["stint"].astype("float").fillna(-1)
+    for _, idx in rows[eligible].groupby([rows["driver_number"][eligible], grp[eligible]]).groups.items():
+        t = rows.loc[idx, "lap_time_s"]
+        if len(t) < LONG_RUN_MIN_LAPS:
+            continue
+        keep = pd.Series(True, index=t.index)
+        for _ in range(2):  # second pass re-centres the band on the kept laps
+            med = t[keep].median()
+            keep = (t - med).abs() <= LONG_RUN_BAND * med
+            if not keep.any():
+                break
+        kept_laps = rows.loc[keep[keep].index, "lap_number"].sort_values().to_numpy()
+        if len(kept_laps) < LONG_RUN_MIN_LAPS:
+            continue
+        streak = best = 1
+        for gap in np.diff(kept_laps):
+            streak = streak + 1 if gap == 1 else 1
+            best = max(best, streak)
+        if best >= LONG_RUN_MIN_STREAK:
+            out[keep[keep].index] = True
+    return out
+
+
 def _classify(laps: pd.DataFrame, s: SessionRef) -> pd.DataFrame:
     reasons: list[list[str]] = [[] for _ in range(len(laps))]
     flags: list[list[str]] = [[] for _ in range(len(laps))]
@@ -155,6 +188,10 @@ def _classify(laps: pd.DataFrame, s: SessionRef) -> pd.DataFrame:
             mad = (t - med).abs().median() or 0.0
             if mad > 0:
                 add(rows.index.isin(idx) & ((rows["lap_time_s"] - med).abs() > OUTLIER_MADS * mad * 1.4826), "lap-time outlier", reasons)
+    elif s.session_type == "Practice":
+        # Trend analyses only make sense on long runs; single push laps stay selectable for lap comparison.
+        ok = np.array([not r for r in reasons])
+        add(ok & ~long_run_mask(rows, ok), NOT_LONG_RUN, reasons)
     else:
         best = rows.groupby("driver_number")["lap_time_s"].transform("min")
         add(rows["lap_time_s"] > best * QUALI_PUSH_RATIO, "not a push lap (>107% of own best)", reasons)

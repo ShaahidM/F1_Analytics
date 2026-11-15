@@ -96,8 +96,15 @@ choice, or an engineering gap. Update this file when a limitation is removed or 
 40. **No automated UI tests in the repo** (Playwright checks were run ad hoc). Backend has 17 offline unit tests.
 41. **Limited sessions verified by hand**: 2024 Monza race and qualifying, 2023 Monza and Australia, 2026 São Paulo,
     2019 Bahrain. Street circuits, Suzuka's crossover, sprint sessions and red-flag restarts haven't been visually checked.
-42. **Practice and live sessions are out of scope.** FP2 long runs could add controlled per-compound degradation data
-    (fuel loads and engine modes are unknown, so they can't feed Model B directly). Candidate next phase.
+42. **Live sessions are out of scope.** Practice sessions are supported (2023+) with these limits:
+    - **Fuel loads, engine modes and run plans are unknown** and differ between teams, so long-run pace order is not a
+      race-pace ranking, and Model B and strategy don't run for practice.
+    - **Long runs are detected heuristically**: 5+ laps within ±2.5% of the run's median on one tyre set, including 3
+      consecutive laps. Very high-degradation runs (pace drifting > 5% across the run) can be clipped, and
+      runs interrupted every other lap are missed.
+    - Practice long runs are short (typically 5–12 laps), so trend intervals are wide and the pace-vs-preservation
+      labels are mostly "no clear pattern" or "insufficient data".
+    - Practice and race results aren't combined: each session is analysed on its own.
 43. **2019–2022 is hidden by default** (a switch shows it): those seasons support lap times, degradation trends and
     strategy only.
 44. **Tyre-age views (degradation, pace vs preservation, strategy) are disabled for qualifying**: 1–3 push laps per set.

@@ -135,8 +135,9 @@ def corners(session_id: str, driver: int, lap: int):
 
 
 def _race_only(s, what: str) -> None:
-    if not s.is_race:
-        raise HTTPException(422, f"{what} needs a race: qualifying has only 1–3 push laps per tyre set")
+    """Tyre-age analyses need long runs: races, sprints and practice, not qualifying."""
+    if s.session_type == "Qualifying":
+        raise HTTPException(422, f"{what} needs a race or practice long runs: qualifying has only 1–3 push laps per tyre set")
 
 
 @router.get("/sessions/{session_id}/degradation")
@@ -193,7 +194,8 @@ def preservation(session_id: str, drivers: str, include_flagged: bool = True):
 def session_model(session_id: str, drivers: str, include_flagged: bool = True):
     s, src = _session(session_id)
     if not s.is_race:
-        raise HTTPException(422, "Model B needs a race: qualifying has no stints or fuel burn to separate")
+        raise HTTPException(422, "The session-wide model needs a race: practice fuel loads are unknown and differ "
+                                 "between teams, and qualifying has no stints")
     a, b = _two_drivers(drivers)
     laps_df = _guard(lambda: session_data.lap_table(session_id))
     try:
@@ -223,3 +225,19 @@ def line(session_id: str, drivers: str, include_flagged: bool = True):
     _session(session_id)
     a, b = _two_drivers(drivers)
     return _guard(lambda: session_data.line_comparison(session_id, a, b, include_flagged))
+
+
+@router.get("/sessions/{session_id}/longruns")
+def long_runs(session_id: str, include_flagged: bool = True):
+    """Every driver's long runs in the session (practice long runs, or race/sprint stints)."""
+    s, src = _session(session_id)
+    _race_only(s, "Long-run analysis")
+    df = _guard(lambda: session_data.lap_table(session_id))
+    drivers = _guard(lambda: src.drivers(s))
+    code = dict(zip(drivers["driver_number"], drivers["code"]))
+    team = dict(zip(drivers["driver_number"], drivers["team"]))
+    runs = [r for r in stint_trends(df, sorted(df["driver_number"].unique()), include_flagged, 0.0) if r["n_used"] >= 5]
+    for r in runs:
+        r["code"] = code.get(r["driver_number"])
+        r["team"] = team.get(r["driver_number"])
+    return {"ci_level": CI_LEVEL, "runs": runs}
