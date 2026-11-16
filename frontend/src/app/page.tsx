@@ -59,7 +59,8 @@ export default function Home() {
   const cmp = useComparison();
   const [ta, tb] = useQueries({
     queries: (["a", "b"] as const).map((k) => ({
-      queryKey: ["trace", sessionId, cmp.data?.[k].driver_number, cmp.data?.[k].lap_number],
+      // Until laps are chosen both keys would be identical (undefined), so give each slot its own placeholder.
+      queryKey: ["trace", sessionId, cmp.data?.[k].driver_number ?? `pending-${k}`, cmp.data?.[k].lap_number],
       queryFn: () => api.trace(sessionId!, cmp.data![k].driver_number, cmp.data![k].lap_number),
       enabled: !!cmp.data && hasTelemetry && view === "session",
       retry: false,

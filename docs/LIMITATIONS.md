@@ -120,8 +120,15 @@ choice, or an engineering gap. Update this file when a limitation is removed or 
     inters a nonsense −0.12 s/lap "degradation"). Races are classified dry/mixed/wet from rainfall and wet-tyre
     usage; Model B warns on mixed/wet, and season figures use dry races only by default.
 47. **Strategy simulator (Stage A)**:
-    - No traffic, dirty air or overtaking yet (Stage B): it's a clean-air comparison. At circuits where track
-      position decides races (Hungary, Monaco) that matters a lot.
+    - Traffic (Stage B, on by default, can be switched off):
+      - The simulated driver can be held up by, and must overtake, the real field; the rest of the field isn't held
+        up by the simulated driver and doesn't react.
+      - The driver's free-air laps are their real laps plus the modelled difference, so time they really lost in
+        traffic stays in, even where the what-if would give them clean air.
+      - The pass chance is a curve fitted to that race's close battles with a weak prior. Sparse races (Monaco: 3
+        passes in 364 battles) are mostly prior.
+      - The 0.3 s following gap, 0.2 s pass cost and 0.6 s SC train spacing are assumptions.
+      - Following doesn't add extra tyre wear, and DRS trains aren't modelled as such.
     - Lap 1 and red-flag restarts aren't modelled (the real laps are kept). The rest of the field keeps its real race.
     - A hypothetical SC/VSC costs everyone the same time; the field doesn't react to it.
     - Extrapolation: plans running tyres longer than anyone did that day rely on a linear/tangent continuation. There

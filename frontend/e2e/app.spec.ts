@@ -116,7 +116,11 @@ test("strategy simulator: Piastri on Norris's one-stop (Hungary 2025)", async ({
   await expect(page.getByText("Race time vs their real strategy").first()).toBeVisible();
   await expect(page.getByText(/90% range/).first()).toBeVisible();
   await expect(page.getByText(/Chance NOR finishes ahead of PIA/)).toBeVisible();
+  // Traffic & overtaking is on by default: the clean-air figure is shown alongside.
+  await expect(page.getByText(/with traffic/).first()).toBeVisible();
+  await expect(page.getByText(/Clean air would be/).first()).toBeVisible();
   await page.getByRole("button", { name: "Find best strategies" }).click();
   await expect(page.getByRole("button", { name: "Load into builder" }).first()).toBeVisible();
+  await expect(page.getByRole("columnheader", { name: "Clean air" })).toBeVisible();
   expect(errors).toEqual([]);
 });

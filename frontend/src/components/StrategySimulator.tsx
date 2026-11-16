@@ -49,12 +49,16 @@ function Simulator({ sessionId, slots, wm }: { sessionId: string; slots: Slot[];
   const compounds = Object.keys(wm.model.compounds);
   const finishers = new Set(Object.keys(wm.actual));
 
+  const [traffic, setTraffic] = useState(true);
   const sim = useMutation({
-    mutationFn: () => api.simulate(sessionId, slots.map((s) => ({ driver: s.driver, stints: plans[s.slot] })), scenario),
+    mutationFn: () => api.simulate(sessionId, slots.map((s) => ({ driver: s.driver, stints: plans[s.slot] })), scenario, traffic),
   });
   const [optSlot, setOptSlot] = useState<"a" | "b">("b");
   const [maxStops, setMaxStops] = useState(2);
-  const opt = useMutation({ mutationFn: () => api.optimise(sessionId, slots.find((s) => s.slot === optSlot)!.driver, maxStops, scenario) });
+  const opt = useMutation({
+    mutationFn: () => api.optimise(sessionId, slots.find((s) => s.slot === optSlot)!.driver, maxStops, scenario, traffic),
+  });
+  const ov = wm.overtaking;
 
   const missing = slots.filter((s) => !finishers.has(String(s.driver)) || !actual(s.driver).length);
   const bt = wm.backtest;
@@ -106,8 +110,15 @@ function Simulator({ sessionId, slots, wm }: { sessionId: string; slots: Slot[];
                 <span className="eyebrow">VSC on laps</span>
                 <input type="text" className="w-40" placeholder="e.g. 25-26" value={vscText} onChange={(e) => setVscText(e.target.value)} />
               </label>
+              <label className="flex items-center gap-1.5 pb-1.5 text-ink-2"
+                title="Off = clean-air comparison (Stage A). On = the driver can be held up by the real field and has to overtake.">
+                <input type="checkbox" checked={traffic} onChange={(e) => setTraffic(e.target.checked)} />
+                Traffic &amp; overtaking
+              </label>
               <span className="pb-1.5 text-ink-3">
                 {wm.neutralised_laps.length ? `Real neutralised laps (kept as they were): ${wm.neutralised_laps.join(", ")}.` : "No safety cars in the real race."}
+                {" "}Overtaking here: {ov.n_passes} passes in {ov.n_battles} close battles
+                {ov.advantage_for_50pct_s !== null ? `, about ${ov.advantage_for_50pct_s.toFixed(1)} s/lap faster needed for a 50% chance` : ""}.
               </span>
               <button className="btn btn-primary ml-auto" onClick={() => sim.mutate()} disabled={sim.isPending}>
                 {sim.isPending && <Spinner size={12} />} Simulate
@@ -247,9 +258,15 @@ function SimResults({ result, slots }: { result: SimResult; slots: Slot[] }) {
               <div className="flex items-center gap-1.5 text-sm font-semibold">
                 <span aria-hidden className="h-2.5 w-2.5 rounded-sm" style={{ background: DRIVER[s.slot] }} />{s.label}
               </div>
-              <div className="mt-2 eyebrow">Race time vs their real strategy</div>
+              <div className="mt-2 eyebrow">Race time vs their real strategy{result.mode === "traffic" ? ", with traffic" : ", clean air"}</div>
               <div className="text-xl font-semibold tabular-nums">{fmtDelta(r.delta_vs_actual_strategy.median)}</div>
               <div className="text-ink-3">90% range {fmtRange(r.delta_vs_actual_strategy)} · negative = faster</div>
+              {r.clean_air_delta && r.traffic && (
+                <div className="mt-1 text-ink-3">
+                  Clean air would be {fmtDelta(r.clean_air_delta.median)}; held up on ~{r.traffic.laps_held_median.toFixed(0)} lap
+                  {r.traffic.laps_held_median === 1 ? "" : "s"}, ~{r.traffic.passes_median.toFixed(0)} pass{r.traffic.passes_median === 1 ? "" : "es"} made
+                </div>
+              )}
               <div className="mt-2 eyebrow">Likely finishing position</div>
               <div className="text-ink-2">
                 {dist.map(([p, v]) => `P${p} ${Math.round(v * 100)}%`).join(" · ")} <span className="text-ink-3">(really P{r.position.actual})</span>
@@ -302,8 +319,9 @@ function OptTable({ result, onLoad }: { result: OptResult; onLoad: (p: SimStint[
           <tr className="border-b border-border">
             <th className="px-2 py-1 font-normal">#</th>
             <th className="px-2 py-1 font-normal">Plan for {result.code}</th>
-            <th className="px-2 py-1 font-normal">vs real strategy <Badge tier="E" /></th>
+            <th className="px-2 py-1 font-normal">vs real strategy{result.mode === "traffic" ? ", with traffic" : ""} <Badge tier="E" /></th>
             <th className="px-2 py-1 font-normal">90% range</th>
+            {result.mode === "traffic" && <th className="px-2 py-1 font-normal">Clean air</th>}
             <th className="px-2 py-1 font-normal">Caveats</th>
             <th className="px-2 py-1 font-normal"></th>
           </tr>
@@ -312,18 +330,25 @@ function OptTable({ result, onLoad }: { result: OptResult; onLoad: (p: SimStint[
           <tr className="border-b border-border/60 text-ink-3">
             <td className="px-2 py-1">real</td>
             <td className="px-2 py-1"><StintBar plan={result.actual} total={result.actual.reduce((t, s) => t + s.laps, 0)} /></td>
-            <td className="px-2 py-1 font-mono">±0.0 s</td><td></td><td></td><td></td>
+            <td className="px-2 py-1 font-mono">±0.0 s</td><td></td>{result.mode === "traffic" && <td></td>}<td></td><td></td>
           </tr>
-          {result.plans.map((p, i) => (
+          {result.plans.map((p, i) => {
+            const main = p.delta_with_traffic ?? p.delta_vs_actual_strategy;
+            return (
             <tr key={i} className="border-b border-border/60">
               <td className="px-2 py-1 font-mono">{i + 1}</td>
               <td className="w-1/3 px-2 py-1"><StintBar plan={p.stints} total={p.stints.reduce((t, s) => t + s.laps, 0)} /></td>
-              <td className="px-2 py-1 font-mono">{fmtDelta(p.delta_vs_actual_strategy.median)}</td>
-              <td className="px-2 py-1 font-mono text-ink-3">{fmtRange(p.delta_vs_actual_strategy)}</td>
+              <td className="px-2 py-1 font-mono">
+                {fmtDelta(main.median)}
+                {p.laps_held ? <span className="ml-1 text-ink-3">({p.laps_held.toFixed(0)} laps held)</span> : null}
+              </td>
+              <td className="px-2 py-1 font-mono text-ink-3">{fmtRange(main)}</td>
+              {result.mode === "traffic" && <td className="px-2 py-1 font-mono text-ink-3">{fmtDelta(p.delta_vs_actual_strategy.median)}</td>}
               <td className="px-2 py-1 text-warn" title={p.extrapolation.join("\n")}>{p.extrapolation.length ? `⚠ ${p.extrapolation.length} extrapolation${p.extrapolation.length > 1 ? "s" : ""}` : ""}</td>
               <td className="px-2 py-1"><button className="btn py-0.5" onClick={() => onLoad(p.stints)}>Load into builder</button></td>
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
       <p className="mt-1 text-[10px] text-ink-3">Hover a caveat to see which stints run beyond the tyre ages seen in this race.</p>

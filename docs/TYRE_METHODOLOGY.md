@@ -173,3 +173,36 @@ closed form; the best 10 distinct plans (same multiset of stints = same plan) ar
 **Validation (backtest of every driver's real strategy, no anchoring, all 2024 dry races)**: median |error| 0.71 s
 per driver over ~95-minute races; 90% within 5 s. On races without SC/VSC/red: median 0.36 s, 95% within 5 s.
 Worst: Australia (8 s median) and Qatar (5 s), where SC bunching and late incidents aren't modelled.
+
+## 9. Strategy simulator Stage B: traffic and overtaking
+
+Code: `analysis/traffic_sim.py`. It is on by default in the UI and can be switched off for the clean-air (Stage A) figure.
+
+- **Field**: every car not being simulated keeps its real crossing times (lead-lap finishers only).
+- **Free laps**: the simulated driver's free lap = real lap + (Stage A plan − Stage A real strategy) per lap, on the
+  same draws. The real plan therefore replays the real race exactly.
+- **Interaction**: when the what-if brings the driver from behind a car at the end of lap L−1 to ahead of it by the
+  end of lap L, and that pass didn't happen in reality at that lap, an overtaking trial runs.
+  - Under SC/VSC/red: no pass.
+  - Either car pitting that lap: the place change happens through the pits, no trial.
+  - Otherwise: a pass with probability P(advantage).
+  - A failed pass holds the driver 0.3 s behind that car (ASSUMPTION); a pass costs 0.2 s (ASSUMPTION).
+- **Overtaking curve, fitted per race**: every lap a car started within 1 s of another on the same lap (no pits, not
+  neutralised) gives one battle. Advantage = model free-air lap time of the car ahead − the car behind (on their real
+  tyres); outcome = pass by the next line. Logistic regression with a weak Gaussian prior (logit intercept −2.5 ± 1.5,
+  slope 2.0 ± 1.5 per s/lap). MAP fit; a Laplace covariance gives the per-draw curve uncertainty.
+  - **Advantage needed for a 50% pass (2024)**: Bahrain 0.7 s, Monza / Spa / Las Vegas ≈ 1.0 s, Hungary 1.2 s,
+    Singapore 1.7 s, Monaco 2.5 s (3 passes in 364 battles). The ordering matches each circuit's reputation.
+- **Hypothetical SC**: at the end of each SC block the lead-lap field (and the simulated drivers) close up to 0.6 s
+  gaps (ASSUMPTION); no passing during it.
+- **Optimiser**: exhaustive clean-air ranking first, then the shortlist is re-run with traffic and re-ranked.
+- **Example, Hungary 2025, Piastri alternatives (Norris on his real strategy)**:
+
+  | Plan | Clean air | With traffic | P(PIA ahead of NOR), with traffic |
+  |---|---|---|---|
+  | Real two-stop | 0.0 s | 0.0 s (exact replay) | 0% |
+  | Norris's one-stop (L31) | −0.4 s | +2.2 s | 26% |
+  | One-stop at L35 | −2.7 s | −0.9 s | 82% |
+  | Clean-air optimiser pick M25-H20-M25 | −7.0 s | −0.5 s (held ~5 laps) | 47% |
+
+  Traffic turns the clean-air favourite into a coin flip, which is the track-position effect Hungary is known for.

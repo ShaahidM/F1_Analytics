@@ -336,6 +336,13 @@ export type WhatIfModel = {
   actual: Record<string, SimStint[]>;
   neutralised_laps: number[];
   assumptions: string[];
+  overtaking: Overtaking;
+};
+export type Overtaking = {
+  n_battles: number;
+  n_passes: number;
+  pass_chance_no_advantage: number;
+  advantage_for_50pct_s: number | null;
 };
 export type SimDriver = {
   code: string;
@@ -345,8 +352,12 @@ export type SimDriver = {
   warnings: string[];
   extrapolation: string[];
   position: { median: number; distribution: Record<string, number>; actual: number };
+  clean_air_delta?: Interval;
+  traffic?: { laps_held_median: number; passes_median: number };
 };
 export type SimResult = {
+  mode: "traffic" | "clean_air";
+  overtaking?: Overtaking;
   drivers: Record<string, SimDriver>;
   assumptions: string[];
   p_first_ahead?: number;
@@ -357,7 +368,15 @@ export type OptResult = {
   code: string;
   max_stops: number;
   actual: SimStint[];
-  plans: { stints: SimStint[]; stops: number; delta_vs_actual_strategy: Interval; extrapolation: string[] }[];
+  mode: "traffic" | "clean_air";
+  plans: {
+    stints: SimStint[];
+    stops: number;
+    delta_vs_actual_strategy: Interval;
+    delta_with_traffic?: Interval;
+    laps_held?: number;
+    extrapolation: string[];
+  }[];
 };
 export type ScenarioIn = { sc: number[]; vsc: number[] };
 
@@ -432,10 +451,10 @@ async function post<T>(path: string, body: unknown): Promise<T> {
 
 export const api = {
   whatifModel: (id: string) => get<WhatIfModel>(`/api/sessions/${id}/whatif/model`),
-  simulate: (id: string, drivers: { driver: number; stints: SimStint[] }[], scenario: ScenarioIn) =>
-    post<SimResult>(`/api/sessions/${id}/whatif/simulate`, { drivers, scenario }),
-  optimise: (id: string, driver: number, maxStops: number, scenario: ScenarioIn) =>
-    post<OptResult>(`/api/sessions/${id}/whatif/optimise`, { driver, max_stops: maxStops, scenario }),
+  simulate: (id: string, drivers: { driver: number; stints: SimStint[] }[], scenario: ScenarioIn, traffic: boolean) =>
+    post<SimResult>(`/api/sessions/${id}/whatif/simulate`, { drivers, scenario, traffic }),
+  optimise: (id: string, driver: number, maxStops: number, scenario: ScenarioIn, traffic: boolean) =>
+    post<OptResult>(`/api/sessions/${id}/whatif/optimise`, { driver, max_stops: maxStops, scenario, traffic }),
   seasons: () => get<Season[]>("/api/seasons"),
   events: (year: number) => get<GPEvent[]>(`/api/seasons/${year}/events`),
   session: (id: string) => get<SessionDetail>(`/api/sessions/${id}`),

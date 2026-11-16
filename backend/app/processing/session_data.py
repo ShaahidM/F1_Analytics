@@ -275,6 +275,13 @@ def line_comparison(session_id: str, a: int, b: int, include_flagged: bool) -> d
 
 
 @lru_cache(maxsize=16)
+def whatif_overtaking(session_id: str):
+    """Overtaking curve fitted to this race's on-track battles (strategy simulator Stage B)."""
+    from app.analysis.traffic_sim import estimate_overtaking
+    return estimate_overtaking(whatif_context(session_id))
+
+
+@lru_cache(maxsize=16)
 def whatif_context(session_id: str):
     """Fitted race model + everything the strategy simulator needs (races only, dry only, compounds required)."""
     from app.analysis.model import session_conditions

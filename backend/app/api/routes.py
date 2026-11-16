@@ -293,12 +293,14 @@ class ScenarioIn(BaseModel):
 class SimulateIn(BaseModel):
     drivers: list[DriverPlanIn] = Field(min_length=1, max_length=2)
     scenario: ScenarioIn = ScenarioIn()
+    traffic: bool = True  # Stage B (traffic + overtaking); False = Stage A clean-air comparison
 
 
 class OptimiseIn(BaseModel):
     driver: int
     max_stops: int = Field(2, ge=1, le=3)
     scenario: ScenarioIn = ScenarioIn()
+    traffic: bool = True
 
 
 def _whatif(session_id: str):
@@ -325,22 +327,45 @@ def whatif_model(session_id: str):
         "actual": {str(d): [s.__dict__ for s in st] for d, st in ctx.actual.items()},
         "own_max": [{"driver": d, "compound": c, "laps": n} for (d, c), n in ctx.model.own_max.items()],
         "neutralised_laps": sorted(ctx.neutral_time), "assumptions": ctx.assumptions,
+        "overtaking": session_data.whatif_overtaking(session_id).summary(),
     }
 
 
 @router.post("/sessions/{session_id}/whatif/simulate")
 def whatif_simulate(session_id: str, body: SimulateIn):
     from app.analysis.simulator import Scenario, Stint, run
+    from app.analysis.traffic_sim import run_with_traffic
     ctx = _whatif(session_id)
     plans = {p.driver: [Stint(s.compound.upper(), s.laps, s.start_age) for s in p.stints] for p in body.drivers}
     if len(plans) != len(body.drivers):
         raise HTTPException(422, "each driver can appear only once")
-    return _sim_guard(lambda: run(ctx, plans, Scenario(body.scenario.sc, body.scenario.vsc)))
+    scenario = Scenario(body.scenario.sc, body.scenario.vsc)
+    clean = _sim_guard(lambda: run(ctx, plans, scenario))
+    if not body.traffic:
+        return {**clean, "mode": "clean_air"}
+    res = _sim_guard(lambda: run_with_traffic(ctx, session_data.whatif_overtaking(session_id), plans, scenario))
+    for d, r in res["drivers"].items():  # validation messages and the clean-air figure come from Stage A
+        c = clean["drivers"][d]
+        r.update(warnings=c["warnings"], extrapolation=c["extrapolation"], laps=c["laps"],
+                 clean_air_delta=c["delta_vs_actual_strategy"])
+    return {**res, "mode": "traffic"}
 
 
 @router.post("/sessions/{session_id}/whatif/optimise")
 def whatif_optimise(session_id: str, body: OptimiseIn):
-    from app.analysis.simulator import Scenario, optimise, validate
+    from app.analysis.simulator import Scenario, Stint, optimise, validate
+    from app.analysis.traffic_sim import run_with_traffic
     ctx = _whatif(session_id)
     _sim_guard(lambda: validate(ctx, body.driver, ctx.actual.get(body.driver, [])))
-    return _sim_guard(lambda: optimise(ctx, body.driver, body.max_stops, Scenario(body.scenario.sc, body.scenario.vsc)))
+    scenario = Scenario(body.scenario.sc, body.scenario.vsc)
+    res = _sim_guard(lambda: optimise(ctx, body.driver, body.max_stops, scenario))
+    if body.traffic:
+        # Clean-air ranking first (fast, exhaustive), then re-rank the shortlist with traffic and overtaking.
+        ov = session_data.whatif_overtaking(session_id)
+        for p in res["plans"]:
+            stints = [Stint(**s) for s in p["stints"]]
+            r = run_with_traffic(ctx, ov, {body.driver: stints}, scenario, draws=200)
+            p["delta_with_traffic"] = r["drivers"][str(body.driver)]["delta_vs_actual_strategy"]
+            p["laps_held"] = r["drivers"][str(body.driver)]["traffic"]["laps_held_median"]
+        res["plans"].sort(key=lambda p: p["delta_with_traffic"]["median"])
+    return {**res, "mode": "traffic" if body.traffic else "clean_air"}
