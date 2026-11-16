@@ -140,3 +140,36 @@ other driver). Shown as ESTIMATED, because the baseline lap had a different fuel
 - Sanity checks: indicators should spike on known management laps (e.g. one-stop races), and coasting should rise
   late in stints before a long run. Team-radio transcripts aren't available (OpenF1 only has audio URLs).
 - Every chart has an "Assumptions & confounders" disclosure listing the active filters and assumption values.
+
+## 8. Strategy what-if simulator (Stage A: lap-time maths)
+
+Code: `analysis/race_model.py`, `analysis/simulator.py`; UI: Strategy tab → "What-if strategy simulator".
+
+**Lap-time model** (dry races only, fitted on every driver's clean laps):
+`lap = α_driver + κ_compound + γ·lap + β_c·age (+ q_c·age² if AIC improves, ≥ 100 laps) + δ_{d,c}·min(age, own max)`.
+- Driver deviations δ are ridge-shrunk toward the field slope (Gaussian prior, SD 0.02 s/lap: an ASSUMPTION). That keeps
+  the model identifiable and stops short stints producing wild slopes.
+- Beyond a driver's own oldest tyre the field slope continues; beyond the field's oldest tyre the quadratic continues
+  along its tangent. Both are flagged as extrapolation in the UI (2 laps of tolerance for in/out laps).
+- A compound is "unreliable" with < 3 drivers, < 40 clean laps or a negative slope (e.g. Hungary 2025 Softs once fitted
+  −0.19 s/lap). It's excluded from the optimiser and flagged in the builder.
+
+**Simulation**:
+- Lap 1 and red-flag restart laps are the driver's real times (starts aren't modelled).
+- On real SC/VSC/red laps each driver keeps their own real lap time, with their real stop removed and the plan's stop
+  charged instead. Pit loss is measured against the model (real in + out lap − model prediction) and split between
+  in-lap and out-lap in the proportion measured in that race. Stops under a red flag are free (regulations); stops
+  under SC/VSC use MultiViewer's SC/VSC loss.
+- Uncertainty: 2,000 Monte Carlo draws of the coefficients (covariance), AR(1) lap noise and pit-loss spread.
+  Strategies are compared on the same draws.
+- **Anchoring**: what-if crossing time = real crossing time + (simulated plan − simulated real strategy). The real
+  strategy reproduces the real race exactly; only the modelled difference carries uncertainty. A hypothetical SC/VSC is
+  applied to both, i.e. it costs every car the same time.
+- Positions: the anchored finish ranked against the rest of the field's real finishing times.
+
+**Optimiser**: every 1–3-stop plan on new tyres with stints ≥ 5 laps and ≥ 2 reliable dry compounds. It is scored in
+closed form; the best 10 distinct plans (same multiset of stints = same plan) are then Monte Carlo'd.
+
+**Validation (backtest of every driver's real strategy, no anchoring, all 2024 dry races)**: median |error| 0.71 s
+per driver over ~95-minute races; 90% within 5 s. On races without SC/VSC/red: median 0.36 s, 95% within 5 s.
+Worst: Australia (8 s median) and Qatar (5 s), where SC bunching and late incidents aren't modelled.

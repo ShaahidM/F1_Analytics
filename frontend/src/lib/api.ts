@@ -268,6 +268,15 @@ export type Strategy = {
   gap: { lap: number; gap_s: number }[];
   positions: Record<string, { lap: number; position: number }[]>;
   cycles: PitCycle[];
+  offset: {
+    stops: { a: number; b: number };
+    stop_laps: { a: number[]; b: number[] };
+    gap_before_first_stop_s: number | null;
+    gap_after_last_stop_s: number | null;
+    gap_at_finish_s: number | null;
+    net_change_s: number | null;
+    pit_loss_s: { a: number; b: number };
+  } | null;
   timing_basis: string;
 };
 
@@ -310,6 +319,47 @@ export type SeasonResult = {
   races: RaceSummary[];
   aggregate: SeasonAggregate[];
 };
+
+export type SimStint = { compound: string; laps: number; start_age: number };
+export type Interval = { median: number; low: number; high: number };
+export type WhatIfModel = {
+  total_laps: number;
+  model: {
+    n_laps: number;
+    r2: number;
+    residual_sd: number;
+    fuel_track_per_lap: { estimate: number; se: number };
+    compounds: Record<string, { offset: number; slope: number; slope_se: number; quadratic: boolean; oldest_tyre: number; unreliable: string | null }>;
+  };
+  backtest: { errors_s: Record<string, number>; median_abs_error_s: number | null; n_drivers: number };
+  pit_loss: { by_driver: Record<string, number>; field_median: number; spread_sd: number; multiviewer: Record<string, number> | null };
+  actual: Record<string, SimStint[]>;
+  neutralised_laps: number[];
+  assumptions: string[];
+};
+export type SimDriver = {
+  code: string;
+  stints: SimStint[];
+  delta_vs_actual_strategy: Interval;
+  laps: number[];
+  warnings: string[];
+  extrapolation: string[];
+  position: { median: number; distribution: Record<string, number>; actual: number };
+};
+export type SimResult = {
+  drivers: Record<string, SimDriver>;
+  assumptions: string[];
+  p_first_ahead?: number;
+  gap_by_lap?: { median: number[]; low: number[]; high: number[]; actual: number[] };
+};
+export type OptResult = {
+  driver: number;
+  code: string;
+  max_stops: number;
+  actual: SimStint[];
+  plans: { stints: SimStint[]; stops: number; delta_vs_actual_strategy: Interval; extrapolation: string[] }[];
+};
+export type ScenarioIn = { sc: number[]; vsc: number[] };
 
 type Num = number | null;
 
@@ -363,7 +413,29 @@ async function get<T>(path: string, params?: Record<string, string | number | un
   return res.json() as Promise<T>;
 }
 
+async function post<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(new URL(path, API_BASE), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    let detail = res.statusText;
+    try {
+      const j = await res.json();
+      detail = typeof j.detail === "string" ? j.detail : JSON.stringify(j.detail);
+    } catch {}
+    throw new ApiError(res.status, detail);
+  }
+  return res.json() as Promise<T>;
+}
+
 export const api = {
+  whatifModel: (id: string) => get<WhatIfModel>(`/api/sessions/${id}/whatif/model`),
+  simulate: (id: string, drivers: { driver: number; stints: SimStint[] }[], scenario: ScenarioIn) =>
+    post<SimResult>(`/api/sessions/${id}/whatif/simulate`, { drivers, scenario }),
+  optimise: (id: string, driver: number, maxStops: number, scenario: ScenarioIn) =>
+    post<OptResult>(`/api/sessions/${id}/whatif/optimise`, { driver, max_stops: maxStops, scenario }),
   seasons: () => get<Season[]>("/api/seasons"),
   events: (year: number) => get<GPEvent[]>(`/api/seasons/${year}/events`),
   session: (id: string) => get<SessionDetail>(`/api/sessions/${id}`),

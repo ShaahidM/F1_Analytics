@@ -38,7 +38,7 @@ choice, or an engineering gap. Update this file when a limitation is removed or 
 ## 3. Lap classification
 15. **SC/VSC/red windows are reconstructed heuristically** from race-control messages (SC ends one typical lap after
     "IN THIS LAP", VSC 20 s after "ENDING", red one lap after the next green or `SESSION STARTED`). Laps at the
-    boundaries can be mis-flagged. (Fixed: restarts after a red flag are signalled by `SESSION STARTED`, not a green
+    boundaries can be mis-flagged. (Fixed: a VSC upgraded straight to a full SC never closed, China 2024. Fixed: restarts after a red flag are signalled by `SESSION STARTED`, not a green
     flag; Monaco and Suzuka 2024 previously marked almost every lap as red-flag.)
 16. **Traffic now uses every car's on-track position** (racing cars, backmarkers, blue flags). The first time a session
     is opened it needs a background download (~20 requests, ~30–60 s). Until then the classification-interval fallback
@@ -119,6 +119,17 @@ choice, or an engineering gap. Update this file when a limitation is removed or 
 45. **Wet and drying races**: the tyre-age models can't separate tyre wear from a changing track (2024 São Paulo gave
     inters a nonsense −0.12 s/lap "degradation"). Races are classified dry/mixed/wet from rainfall and wet-tyre
     usage; Model B warns on mixed/wet, and season figures use dry races only by default.
+47. **Strategy simulator (Stage A)**:
+    - No traffic, dirty air or overtaking yet (Stage B): it's a clean-air comparison. At circuits where track
+      position decides races (Hungary, Monaco) that matters a lot.
+    - Lap 1 and red-flag restarts aren't modelled (the real laps are kept). The rest of the field keeps its real race.
+    - A hypothetical SC/VSC costs everyone the same time; the field doesn't react to it.
+    - Extrapolation: plans running tyres longer than anyone did that day rely on a linear/tangent continuation. There
+      is no tyre "cliff" unless the data showed one. Flagged in the UI, never hidden.
+    - The real tyre allocation (sets available) isn't public; used-set ages come from OpenF1.
+    - Drivers are assumed to drive the same way on a different strategy (no extra push or management).
+    - Dry races only; drivers who didn't complete the full distance can't be simulated.
+    - Backtest: median error 0.7 s per driver per race (2024), but races with SC bunching can be off by 5–15 s.
 46. **Season comparison**:
     - The first run for a pair takes 10–15 min (≈ 300 requests); results are cached per race.
     - Traffic uses the classification-interval fallback (no backmarker detection) to keep the request count down.

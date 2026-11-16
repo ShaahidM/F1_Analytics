@@ -100,3 +100,14 @@ def test_red_flag_closes_on_session_restart():
     ])
     (w,) = neutralisation_windows(rc, pd.Timedelta(seconds=90), T0 + pd.Timedelta(hours=3))
     assert w.kind == "red" and w.end == pd.Timestamp("2024-01-01T12:41:30Z")
+
+
+def test_vsc_upgraded_to_safety_car_closes_vsc():
+    rc = _rc([
+        ("2024-01-01T12:00:00Z", "SafetyCar", None, None, None, "VIRTUAL SAFETY CAR DEPLOYED"),
+        ("2024-01-01T12:04:00Z", "SafetyCar", None, None, None, "SAFETY CAR DEPLOYED"),
+        ("2024-01-01T12:10:00Z", "SafetyCar", None, None, None, "SAFETY CAR IN THIS LAP"),
+    ])
+    w = {x.kind: x for x in neutralisation_windows(rc, pd.Timedelta(seconds=90), T0 + pd.Timedelta(hours=3))}
+    assert w["vsc"].end == pd.Timestamp("2024-01-01T12:04:00Z")
+    assert w["sc"].end == pd.Timestamp("2024-01-01T12:11:30Z")

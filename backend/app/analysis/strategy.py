@@ -123,3 +123,28 @@ def pit_cycles(cross: pd.DataFrame, stops: dict[int, list[dict]], laps: pd.DataF
             "outcome": outcome,
         })
     return out
+
+
+def strategy_offset(cross: pd.DataFrame, stops: dict[int, list[dict]], cycles: list[dict], a: int, b: int,
+                    total: int) -> dict | None:
+    """Different strategies (e.g. 1-stop vs 2-stop) that the stop-pairing in `pit_cycles` can't capture.
+
+    Gaps are B − A in seconds (positive = B behind), measured before the first stop by either driver, after the last
+    one, and at the finish."""
+    paired = {(c["first_lap"], c["second_lap"]) for c in cycles}
+    paired_laps = {lap for pair in paired for lap in pair}
+    la, lb = [s["lap"] for s in stops[a]], [s["lap"] for s in stops[b]]
+    if len(la) == len(lb) and all(lap in paired_laps for lap in la + lb):
+        return None
+    if not la and not lb:
+        return None
+    first, last = min(la + lb), max(la + lb)
+    loss = lambda d: round(sum(s["estimated_loss_s"] or 0.0 for s in stops[d]), 1)  # noqa: E731
+    before = _gap(cross, b, a, first - 1)
+    finish = _gap(cross, b, a, total)
+    return {
+        "stops": {"a": len(la), "b": len(lb)}, "stop_laps": {"a": la, "b": lb},
+        "gap_before_first_stop_s": before, "gap_after_last_stop_s": _gap(cross, b, a, min(last + 1, total)),
+        "gap_at_finish_s": finish, "net_change_s": None if before is None or finish is None else round(finish - before, 3),
+        "pit_loss_s": {"a": loss(a), "b": loss(b)},
+    }

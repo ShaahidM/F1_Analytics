@@ -43,6 +43,8 @@ def neutralisation_windows(rc: pd.DataFrame, typical_lap: pd.Timedelta, session_
             elif "VIRTUAL SAFETY CAR ENDING" in msg:
                 close("vsc", date + VSC_GRACE)
             elif "SAFETY CAR DEPLOYED" in msg:
+                # A VSC can be upgraded straight to a full SC with no "VSC ENDING" (China 2024).
+                close("vsc", date)
                 open_.setdefault("sc", date)
             elif "SAFETY CAR IN THIS LAP" in msg:
                 close("sc", date + typical_lap)

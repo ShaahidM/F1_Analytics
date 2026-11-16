@@ -9,6 +9,7 @@ import { fmtLap } from "@/lib/trace";
 import { Badge } from "./Badge";
 import { CompoundChip } from "./ComparisonPanel";
 import { Plot } from "./Plot";
+import { StrategySimulator } from "./StrategySimulator";
 
 type Slot = { slot: "a" | "b"; driver: number; label: string };
 const UNKNOWN = "#8a8984";
@@ -125,7 +126,7 @@ export function StrategyView({ sessionId, slots, drivers }: { sessionId: string;
           Undercut / overcut: paired pit cycles <Badge tier="C" note="Gaps from timing at the end of the lap before the first stop and the lap after the second stop" />
         </h3>
         {st.cycles.length === 0 ? (
-          <p className="px-2 py-2 text-xs text-ink-3">The two drivers never stopped within 6 laps of each other, so there is no direct undercut/overcut to measure. Use the gap chart to compare their strategies.</p>
+          <p className="px-2 py-2 text-xs text-ink-3">The two drivers never stopped within 6 laps of each other, so there is no direct undercut/overcut to measure.</p>
         ) : (
           <table className="w-full text-[11px]">
             <thead className="text-left text-ink-3">
@@ -168,7 +169,11 @@ export function StrategyView({ sessionId, slots, drivers }: { sessionId: string;
         </p>
       </section>
 
+      {st.offset && <OffsetSummary offset={st.offset} slots={slots} />}
+
       <CrossCompound model={model.data} isError={model.isError} error={model.error as Error | null} slots={slots} />
+
+      <StrategySimulator sessionId={sessionId} slots={slots} />
     </div>
   );
 }
@@ -219,6 +224,34 @@ function CrossCompound({ model, isError, error, slots }: {
           {model.warnings.map((w) => <div key={w} className="mt-1 text-warn">⚠ {w}</div>)}
         </div>
       </div>
+    </section>
+  );
+}
+
+/** Different strategies (e.g. 1-stop vs 2-stop): how the gap changed across the pit-stop phase. */
+function OffsetSummary({ offset, slots }: { offset: NonNullable<Awaited<ReturnType<typeof api.strategy>>["offset"]>; slots: Slot[] }) {
+  const [a, b] = slots;
+  const side = (g: number | null) => (g === null ? "—" : g >= 0 ? `${b.label} ${g.toFixed(1)} s behind` : `${b.label} ${(-g).toFixed(1)} s ahead`);
+  const net = offset.net_change_s;
+  return (
+    <section className="card p-3 text-xs">
+      <h3 className="flex items-center gap-2 text-xs font-semibold">
+        Different strategies: {a.label} {offset.stops.a}-stop vs {b.label} {offset.stops.b}-stop <Badge tier="C" note="Gaps from timing at the end of each lap" />
+      </h3>
+      <div className="mt-2 grid grid-cols-2 gap-3 md:grid-cols-4">
+        <div><div className="eyebrow">Before the first stop</div><div className="font-mono text-ink">{side(offset.gap_before_first_stop_s)}</div></div>
+        <div><div className="eyebrow">After the last stop</div><div className="font-mono text-ink">{side(offset.gap_after_last_stop_s)}</div></div>
+        <div><div className="eyebrow">At the finish</div><div className="font-mono text-ink">{side(offset.gap_at_finish_s)}</div></div>
+        <div>
+          <div className="eyebrow">Net swing</div>
+          <div className="font-mono text-ink">{net === null ? "—" : `${Math.abs(net).toFixed(1)} s to ${net > 0 ? a.label : b.label}`}</div>
+        </div>
+      </div>
+      <p className="mt-2 text-ink-3">
+        Stops: {a.label} lap {offset.stop_laps.a.join(", ") || "none"} ({offset.pit_loss_s.a.toFixed(1)} s lost) · {b.label} lap{" "}
+        {offset.stop_laps.b.join(", ") || "none"} ({offset.pit_loss_s.b.toFixed(1)} s lost). Use the simulator below to test what the other
+        strategy would have done.
+      </p>
     </section>
   );
 }

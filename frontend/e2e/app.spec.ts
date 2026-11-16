@@ -104,3 +104,19 @@ test("season comparison starts and reports progress or results", async ({ page }
   await page.getByRole("button", { name: "Compare season" }).click();
   await expect(page.getByText(/Analysing races|Season scorecard/).first()).toBeVisible();
 });
+
+test("strategy simulator: Piastri on Norris's one-stop (Hungary 2025)", async ({ page }) => {
+  const errors = collectErrors(page);
+  await openSession(page, "2025", /Hungar/, /^Race/, /^NOR/, /^PIA/);
+  await page.getByRole("button", { name: "Strategy", exact: true }).click();
+  await expect(page.getByText("What-if strategy simulator")).toBeVisible();
+  await expect(page.getByText(/Model accuracy here/)).toBeVisible();
+  await page.getByRole("button", { name: "NOR's strategy" }).click();
+  await page.getByRole("button", { name: "Simulate", exact: true }).click();
+  await expect(page.getByText("Race time vs their real strategy").first()).toBeVisible();
+  await expect(page.getByText(/90% range/).first()).toBeVisible();
+  await expect(page.getByText(/Chance NOR finishes ahead of PIA/)).toBeVisible();
+  await page.getByRole("button", { name: "Find best strategies" }).click();
+  await expect(page.getByRole("button", { name: "Load into builder" }).first()).toBeVisible();
+  expect(errors).toEqual([]);
+});

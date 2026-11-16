@@ -268,3 +268,79 @@ def season_compare(year: int, a: str, b: str, include_wet: bool = False):
     races = sorted(st.get("races", []), key=lambda r: r.get("round") or 0)
     return {**{k: v for k, v in st.items() if k != "races"}, "races": races,
             "aggregate": season.aggregate(year, a, b, include_wet)}
+
+
+# ---- strategy what-if simulator (Stage A: lap-time maths, no traffic) ----------------------------------
+from pydantic import BaseModel, Field  # noqa: E402
+
+
+class StintIn(BaseModel):
+    compound: str
+    laps: int = Field(ge=1)
+    start_age: int = Field(0, ge=0)
+
+
+class DriverPlanIn(BaseModel):
+    driver: int
+    stints: list[StintIn] = Field(min_length=1, max_length=6)
+
+
+class ScenarioIn(BaseModel):
+    sc: list[int] = []
+    vsc: list[int] = []
+
+
+class SimulateIn(BaseModel):
+    drivers: list[DriverPlanIn] = Field(min_length=1, max_length=2)
+    scenario: ScenarioIn = ScenarioIn()
+
+
+class OptimiseIn(BaseModel):
+    driver: int
+    max_stops: int = Field(2, ge=1, le=3)
+    scenario: ScenarioIn = ScenarioIn()
+
+
+def _whatif(session_id: str):
+    _session(session_id)
+    return _guard(lambda: session_data.whatif_context(session_id))
+
+
+def _sim_guard(fn):
+    from app.analysis.simulator import StrategyError
+    try:
+        return fn()
+    except StrategyError as exc:
+        raise HTTPException(422, str(exc))
+
+
+@router.get("/sessions/{session_id}/whatif/model")
+def whatif_model(session_id: str):
+    from app.analysis.simulator import backtest
+    ctx = _whatif(session_id)
+    return {
+        "total_laps": ctx.total_laps, "model": ctx.model.summary(), "backtest": backtest(ctx),
+        "pit_loss": {"by_driver": {ctx.codes.get(d, str(d)): round(v, 2) for d, v in ctx.pit_loss.items()},
+                     "field_median": round(ctx.field_loss, 2), "spread_sd": round(ctx.loss_sd, 2), "multiviewer": ctx.mv_loss},
+        "actual": {str(d): [s.__dict__ for s in st] for d, st in ctx.actual.items()},
+        "own_max": [{"driver": d, "compound": c, "laps": n} for (d, c), n in ctx.model.own_max.items()],
+        "neutralised_laps": sorted(ctx.neutral_time), "assumptions": ctx.assumptions,
+    }
+
+
+@router.post("/sessions/{session_id}/whatif/simulate")
+def whatif_simulate(session_id: str, body: SimulateIn):
+    from app.analysis.simulator import Scenario, Stint, run
+    ctx = _whatif(session_id)
+    plans = {p.driver: [Stint(s.compound.upper(), s.laps, s.start_age) for s in p.stints] for p in body.drivers}
+    if len(plans) != len(body.drivers):
+        raise HTTPException(422, "each driver can appear only once")
+    return _sim_guard(lambda: run(ctx, plans, Scenario(body.scenario.sc, body.scenario.vsc)))
+
+
+@router.post("/sessions/{session_id}/whatif/optimise")
+def whatif_optimise(session_id: str, body: OptimiseIn):
+    from app.analysis.simulator import Scenario, optimise, validate
+    ctx = _whatif(session_id)
+    _sim_guard(lambda: validate(ctx, body.driver, ctx.actual.get(body.driver, [])))
+    return _sim_guard(lambda: optimise(ctx, body.driver, body.max_stops, Scenario(body.scenario.sc, body.scenario.vsc)))

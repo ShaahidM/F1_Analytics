@@ -12,7 +12,7 @@ from app.analysis.corners import Zone, build_zones, zone_metrics
 from app.analysis.degradation import _fit
 from app.analysis.line import compare_line
 from app.analysis.preservation import corner_rows, stint_zone_trends
-from app.analysis.strategy import crossing_times, pit_cycles, pit_stops, positions, stints_table
+from app.analysis.strategy import crossing_times, pit_cycles, pit_stops, positions, stints_table, strategy_offset
 from app.analysis.style import STYLE_METRICS, lap_style
 from app.config import POSITION_UNITS_PER_M, TRACE_GRID_M
 from app.processing import traffic
@@ -261,7 +261,8 @@ def strategy(session_id: str, a: int, b: int) -> dict:
         "gap": [{"lap": int(n), "gap_s": round(float(tb[n] - ta[n]), 3)} for n in sorted(common)],
         "positions": {str(d): [{"lap": int(r.lap_number), "position": int(r.position)}
                                for r in pos[pos["driver_number"] == d].sort_values("lap_number").itertuples()] for d in (a, b)},
-        "cycles": pit_cycles(cross, stops, laps, a, b),
+        "cycles": (cycles := pit_cycles(cross, stops, laps, a, b)),
+        "offset": strategy_offset(cross, stops, cycles, a, b, int(laps["lap_number"].max())),
         "timing_basis": "line-crossing timestamps" if laps["lap_end"].notna().any() else "cumulative lap times",
     }
 
@@ -271,3 +272,40 @@ def line_comparison(session_id: str, a: int, b: int, include_flagged: bool) -> d
     rb = preservation(session_id, b, include_flagged)["rows"]
     zs = zones(session_id)
     return {"zones": [z.to_dict() for z in zs], "rows": compare_line(ra, rb, [z.id for z in zs])}
+
+
+@lru_cache(maxsize=16)
+def whatif_context(session_id: str):
+    """Fitted race model + everything the strategy simulator needs (races only, dry only, compounds required)."""
+    from app.analysis.model import session_conditions
+    from app.analysis.race_model import fit_race_model
+    from app.analysis.simulator import build_context
+
+    s = get_session(session_id)
+    src = source_for_session(session_id)
+    if not s.is_race:
+        raise DataUnavailable("strategy simulation (races and sprints only)")
+    if not src.capabilities(s).compounds:
+        raise DataUnavailable("tyre compounds, which strategy simulation needs (2023 onwards)")
+    laps = base_lap_table(session_id)
+    try:
+        weather = src.weather(s)
+    except DataUnavailable:
+        weather = None
+    conditions = session_conditions(laps, weather)
+    if conditions != "dry":
+        raise DataUnavailable(f"strategy simulation in {conditions} conditions: tyre-age effects aren't interpretable "
+                              "when the track is wetting or drying")
+    try:
+        model = fit_race_model(laps)
+    except ValueError as exc:
+        raise DataUnavailable(str(exc))
+    try:
+        pits = src.pits(s)
+    except DataUnavailable:
+        pits = pd.DataFrame(columns=["driver_number", "lap_number", "lane_duration_s", "stop_duration_s"])
+    drivers = src.drivers(s)
+    codes = dict(zip(drivers["driver_number"].astype(int), drivers["code"]))
+    stops = {int(d): pit_stops(laps, pits, int(d)) for d in laps["driver_number"].unique()}
+    info = multiviewer.circuit_info(s.circuit_key, s.year) if s.circuit_key is not None else None
+    return build_context(model, laps, crossing_times(laps), stops, stints_table(laps), codes, (info or {}).get("pit_loss"))
