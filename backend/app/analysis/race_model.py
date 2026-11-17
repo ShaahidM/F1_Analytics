@@ -101,8 +101,9 @@ def _ols_aic(X: np.ndarray, y: np.ndarray) -> float:
     return len(y) * np.log(rss / len(y)) + 2 * rank
 
 
-def fit_race_model(laps: pd.DataFrame) -> RaceModel:
-    """Fit on clean laps (traffic-flagged laps included, as in Model B) with known compound and tyre age."""
+def fit_race_model(laps: pd.DataFrame, allow_quad: bool = True) -> RaceModel:
+    """Fit on clean laps (traffic-flagged laps included, as in Model B) with known compound and tyre age.
+    allow_quad=False forces linear degradation, so slopes mean the same thing in every race (cross-race prior)."""
     df = laps[laps["clean"] & laps["compound"].notna() & laps["tyre_age"].notna() & laps["lap_time_s"].notna()].copy()
     df["tyre_age"] = df["tyre_age"].astype(float)
     df["driver_number"] = df["driver_number"].astype(int)
@@ -135,7 +136,7 @@ def fit_race_model(laps: pd.DataFrame) -> RaceModel:
     quad = {}
     for c in compounds:
         q = np.where(comp == c, age * age, 0.0)
-        rich = (comp == c).sum() >= QUAD_MIN_LAPS and len(set(drv[comp == c])) >= MIN_DRIVERS
+        rich = allow_quad and (comp == c).sum() >= QUAD_MIN_LAPS and len(set(drv[comp == c])) >= MIN_DRIVERS
         quad[c] = bool(rich and _ols_aic(np.column_stack([X0, q]), y) < _ols_aic(X0, y) - QUAD_AIC_GAIN)
         if quad[c]:
             base_cols[f"quad:{c}"] = q

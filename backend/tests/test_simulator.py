@@ -118,3 +118,22 @@ def test_cheaper_stop_under_safety_car():
 def test_rank_deficiency_guard_single_compound_driver():
     _, ctx = race(noise=0.05, one_compound_driver=True)
     assert np.all(np.isfinite(ctx.model.theta)) and np.all(np.isfinite(ctx.model.cov))
+
+
+def test_offset_dependence_isolates_the_compound_offsets(monkeypatch):
+    import app.analysis.simulator as sim_mod
+    _, ctx = race(noise=0.0)
+    d = 5
+    stop = 14 + d
+    act = sim_mod.offset_dependence(ctx, d, ctx.actual[d], Scenario())
+    assert act["effect_s"] == 0.0 and not act["flagged"] and act["message"] is None
+    # 5 more Medium laps instead of Hard: the offset part is 5 × (MEDIUM − HARD offset), whatever the tyre-age part is.
+    alt = [Stint("MEDIUM", stop + 5), Stint("HARD", N - stop - 5)]
+    dep = sim_mod.offset_dependence(ctx, d, alt, Scenario())
+    assert abs(dep["effect_s"] - 5 * (OFFSET["MEDIUM"] - OFFSET["HARD"])) < 0.3
+    monkeypatch.setattr(sim_mod, "OFFSET_WARN_SHARE", 0.0)
+    flagged = sim_mod.offset_dependence(ctx, d, alt, Scenario())
+    assert flagged["flagged"] and "compound offsets" in flagged["message"]
+    r = run(ctx, {d: alt}, Scenario(), draws=50)["drivers"][str(d)]
+    assert "offset_dependence" in r
+    assert "offset_dependence" in optimise(ctx, d, 1, Scenario())["plans"][0]

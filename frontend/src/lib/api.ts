@@ -344,6 +344,12 @@ export type Overtaking = {
   pass_chance_no_advantage: number;
   advantage_for_50pct_s: number | null;
 };
+export type OffsetDependence = {
+  effect_s: number;
+  delta_without_offsets_s: number;
+  flagged: boolean;
+  message: string | null;
+};
 export type SimDriver = {
   code: string;
   stints: SimStint[];
@@ -351,6 +357,7 @@ export type SimDriver = {
   laps: number[];
   warnings: string[];
   extrapolation: string[];
+  offset_dependence: OffsetDependence;
   position: { median: number; distribution: Record<string, number>; actual: number };
   clean_air_delta?: Interval;
   traffic?: { laps_held_median: number; passes_median: number };
@@ -376,6 +383,7 @@ export type OptResult = {
     delta_with_traffic?: Interval;
     laps_held?: number;
     extrapolation: string[];
+    offset_dependence: OffsetDependence;
   }[];
 };
 export type ScenarioIn = { sc: number[]; vsc: number[] };

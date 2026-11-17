@@ -30,6 +30,10 @@ ASSUMED_VSC_RATIO = 1.30
 ASSUMED_SC_LOSS_FACTOR = 0.60
 ASSUMED_VSC_LOSS_FACTOR = 0.70
 DRY = {"SOFT", "MEDIUM", "HARD"}
+# Flag a plan when compound offsets supply at least this much of its time difference, and at least this share of it
+# (analyst choices: ~1 s is a few times the lap-time noise accumulated over a stint comparison).
+OFFSET_WARN_S = 1.0
+OFFSET_WARN_SHARE = 0.5
 
 
 @dataclass
@@ -220,6 +224,31 @@ def extrapolation_flags(ctx: RaceContext, driver: int, stints: list[Stint]) -> l
     return out
 
 
+def offset_dependence(ctx: RaceContext, driver: int, stints: list[Stint], scenario: Scenario) -> dict:
+    """How much of a plan's difference to the real strategy comes from the fitted compound offsets κ (point estimate).
+
+    The offsets are the weakest part of the lap-time model: across 76 dry 2023–26 races they don't track practice pace
+    (docs/TYRE_METHODOLOGY.md §10), so a plan that wins mostly because of them should not be trusted."""
+    m = ctx.model
+    plain = m.theta.copy()
+    for name, i in m.index.items():
+        if name.startswith("cmp:"):
+            plain[i] = 0.0
+    zero, no_loss = np.zeros((1, ctx.total_laps)), np.zeros((1, 3))
+
+    def delta(theta: np.ndarray) -> float:
+        a = simulate(ctx, driver, stints, scenario, theta[None, :], zero, no_loss)[0, -1]
+        b = simulate(ctx, driver, ctx.actual[driver], scenario, theta[None, :], zero, no_loss)[0, -1]
+        return float(a - b)
+
+    full, without = delta(m.theta), delta(plain)
+    effect = full - without
+    flagged = abs(effect) >= OFFSET_WARN_S and abs(effect) >= OFFSET_WARN_SHARE * abs(full)
+    return {"effect_s": round(effect, 2), "delta_without_offsets_s": round(without, 2), "flagged": bool(flagged),
+            "message": (f"{effect:+.1f} s of this plan's {full:+.1f} s comes from fitted compound offsets, which don't "
+                        f"match practice pace and aren't validated; without them it is {without:+.1f} s") if flagged else None}
+
+
 # ---- simulation -------------------------------------------------------------------------------------
 def _plan(ctx: RaceContext, stints: list[Stint]):
     """Per-lap compound and tyre age (index 0 = lap 1) and the in-laps where stops happen."""
@@ -323,6 +352,7 @@ def run(ctx: RaceContext, plans: dict[int, list[Stint]], scenario: Scenario, dra
             "delta_vs_actual_strategy": _interval(sim[:, -1] - base[:, -1]),
             "laps": np.round(np.diff(np.median(sim, axis=0)), 3).tolist(),
             "warnings": warnings, "extrapolation": extrapolation_flags(ctx, d, stints),
+            "offset_dependence": offset_dependence(ctx, d, stints, scenario),
         }
     for d in plans:
         mine = anchored[d][:, -1]
@@ -430,7 +460,8 @@ def optimise(ctx: RaceContext, driver: int, max_stops: int, scenario: Scenario, 
         sim = simulate(ctx, driver, p, scenario, thetas, noise, loss_noise)[:, -1]
         ranked.append({"stints": [s.__dict__ for s in p], "stops": len(p) - 1,
                        "delta_vs_actual_strategy": _interval(sim - base),
-                       "extrapolation": extrapolation_flags(ctx, driver, p)})
+                       "extrapolation": extrapolation_flags(ctx, driver, p),
+                       "offset_dependence": offset_dependence(ctx, driver, p, scenario)})
     ranked.sort(key=lambda r: r["delta_vs_actual_strategy"]["median"])
     return {"driver": driver, "code": ctx.codes.get(driver), "max_stops": max_stops, "plans": ranked,
             "actual": [s.__dict__ for s in ctx.actual[driver]]}

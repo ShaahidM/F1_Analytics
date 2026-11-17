@@ -90,21 +90,26 @@ choice, or an engineering gap. Update this file when a limitation is removed or 
 33. **Undercut/overcut** covers only the selected pair and stops within 6 laps of each other. "On-track difference" mixes
     the fresh-tyre gain with traffic and old-tyre pace. There is no counterfactual simulation.
 34. **Cross-compound curves** extrapolate beyond the ages a driver actually ran, using field-wide slopes.
+35. **Fitted compound offsets are not validated and probably biased** (race phase, fuel and strategy are confounded with
+    compound choice). They don't track practice pace and can't be predicted across races (TYRE_METHODOLOGY §10), so plans
+    that win mostly through them are flagged `offset_dependence`. The 2024 backtest can't detect this.
+36. **No cross-race degradation prior**: thin compounds (< 3 drivers, < 40 laps) stay excluded, because a prior from other
+    races is too wide (about 0.04 s/lap against slopes of about 0.05).
 
 ## 7. Platform / engineering
-35. **Local, single user, no authentication.** Caches live in `data/` and in-process LRU memory (restart to clear).
-36. **First loads are slow** (rate limits; style/preservation compute every clean lap, ~4–6 s per session pair).
-37. **`uvicorn --reload` in the OneDrive folder sometimes misses new routes**; OneDrive also syncs `node_modules`,
+37. **Local, single user, no authentication.** Caches live in `data/` and in-process LRU memory (restart to clear).
+38. **First loads are slow** (rate limits; style/preservation compute every clean lap, ~4–6 s per session pair).
+39. **`uvicorn --reload` in the OneDrive folder sometimes misses new routes**; OneDrive also syncs `node_modules`,
     `.venv` and `data/`.
-38. **Dark theme only, desktop layout only.** There are no data-table alternatives for most charts, and Plotly adds ~3.5 MB.
-39. **DuckDB is installed but unused** (Parquet is read with pandas).
-40. **Tests**: 20 offline backend unit tests and 4 end-to-end browser tests (`frontend/e2e`, Playwright on installed
+40. **Dark theme only, desktop layout only.** There are no data-table alternatives for most charts, and Plotly adds ~3.5 MB.
+41. **DuckDB is installed but unused** (Parquet is read with pandas).
+42. **Tests**: 20 offline backend unit tests and 4 end-to-end browser tests (`frontend/e2e`, Playwright on installed
     Edge). The e2e tests use real cached data for 2024 Monza, so the first run on a fresh machine downloads it.
-41. **Sessions verified**: 2024 Monza (race, qualifying, FP2), Monaco, Suzuka, Las Vegas and the Austria sprint;
+43. **Sessions verified**: 2024 Monza (race, qualifying, FP2), Monaco, Suzuka, Las Vegas and the Austria sprint;
     2023 Monza and Australia; 2026 São Paulo and Mexico FP2; 2019 Bahrain. On these, trace lap times are within ~0.1 s
     of official, MultiViewer corners matched, and finishing orders were correct. Suzuka's crossover caused no
     projection jumps (lateral p99 < 0.7 m). Wet races and the 2026 sprint format haven't been checked.
-42. **Live sessions are out of scope.** Practice sessions are supported (2023+) with these limits:
+44. **Live sessions are out of scope.** Practice sessions are supported (2023+) with these limits:
     - **Fuel loads, engine modes and run plans are unknown** and differ between teams, so long-run pace order is not a
       race-pace ranking, and Model B and strategy don't run for practice.
     - **Long runs are detected heuristically**: 5+ laps within ±2.5% of the run's median on one tyre set, including 3
@@ -113,13 +118,13 @@ choice, or an engineering gap. Update this file when a limitation is removed or 
     - Practice long runs are short (typically 5–12 laps), so trend intervals are wide and the pace-vs-preservation
       labels are mostly "no clear pattern" or "insufficient data".
     - Practice and race results aren't combined: each session is analysed on its own.
-43. **2019–2022 is hidden by default** (a switch shows it): those seasons support lap times, degradation trends and
+45. **2019–2022 is hidden by default** (a switch shows it): those seasons support lap times, degradation trends and
     strategy only.
-44. **Tyre-age views (degradation, pace vs preservation, strategy) are disabled for qualifying**: 1–3 push laps per set.
-45. **Wet and drying races**: the tyre-age models can't separate tyre wear from a changing track (2024 São Paulo gave
+46. **Tyre-age views (degradation, pace vs preservation, strategy) are disabled for qualifying**: 1–3 push laps per set.
+47. **Wet and drying races**: the tyre-age models can't separate tyre wear from a changing track (2024 São Paulo gave
     inters a nonsense −0.12 s/lap "degradation"). Races are classified dry/mixed/wet from rainfall and wet-tyre
     usage; Model B warns on mixed/wet, and season figures use dry races only by default.
-47. **Strategy simulator (Stage A)**:
+49. **Strategy simulator (Stage A)**:
     - Traffic (Stage B, on by default, can be switched off):
       - The simulated driver can be held up by, and must overtake, the real field; the rest of the field isn't held
         up by the simulated driver and doesn't react.
@@ -137,7 +142,7 @@ choice, or an engineering gap. Update this file when a limitation is removed or 
     - Drivers are assumed to drive the same way on a different strategy (no extra push or management).
     - Dry races only; drivers who didn't complete the full distance can't be simulated.
     - Backtest: median error 0.7 s per driver per race (2024), but races with SC bunching can be off by 5–15 s.
-46. **Season comparison**:
+48. **Season comparison**:
     - The first run for a pair takes 10–15 min (≈ 300 requests); results are cached per race.
     - Traffic uses the classification-interval fallback (no backmarker detection) to keep the request count down.
     - Season medians treat every race equally regardless of how many clean laps it had; per-race intervals aren't

@@ -206,3 +206,46 @@ Code: `analysis/traffic_sim.py`. It is on by default in the UI and can be switch
   | Clean-air optimiser pick M25-H20-M25 | −7.0 s | −0.5 s (held ~5 laps) | 47% |
 
   Traffic turns the clean-air favourite into a coin flip, which is the track-position effect Hungary is known for.
+
+## 10. Cross-race degradation prior: tested, not adopted
+
+Code: `processing/priors.py` (training table), `analysis/deg_prior.py` (model and validation). Not wired into the simulator.
+
+**Idea**: predict a compound's field degradation slope and fresh-tyre offset from circuit, season, track temperature
+(and, later, practice running) so thin compounds could be modelled with an informed prior instead of being excluded.
+
+**Training table**: one row per dry Grand Prix × compound from a linear-only `fit_race_model(allow_quad=False)` over every
+2023–26 race (90 races: 76 dry, 12 wet or mixed skipped, 2 with too few tyre laps; 213 rows). Per race it stores the slope,
+the offset vs Medium, their standard errors and the race features. Pre-race features (`data/priors/weekends/`) are practice
+long-run slopes, long-run pace vs Medium within the same team and session, and best-lap pace vs Medium per driver.
+
+**Model**: `y = μ_compound + u_circuit + s_season + b·track_temp (+ practice features)`, in % of lap time, circuit and
+season effects ridge-shrunk (strength picked by leave-one-race-out), rows weighted by 1/(se² + τ²). Challenger: gradient
+boosting (scikit-learn).
+
+**Validation** (mean absolute error on held-out races; "forward" trains only on earlier seasons):
+
+| Target | Scheme | Prior | Compound mean | Same circuit last year | Gradient boosting |
+|---|---|---|---|---|---|
+| Slope (s/lap) | leave-one-race-out | 0.0253 | 0.0300 | 0.0307 | 0.0283 |
+| Slope (s/lap) | forward | 0.0277 | 0.0306 | 0.0310 | 0.0308 |
+| Offset vs Medium (s) | leave-one-race-out | 0.351 | 0.355 | 0.429 | 0.406 |
+| Offset vs Medium (s) | forward | 0.403 | 0.401 | 0.481 | 0.444 |
+
+- **Slopes**: a small real gain over the compound average (about 0.003–0.005 s/lap, 90% interval above zero), but the
+  prior's width (≈ 0.04 s/lap) is similar to a typical slope (0.05), so it can't rescue a thin compound.
+- **Offsets**: no better than the compound average. Gradient boosting is worse everywhere, so it isn't a dependency.
+- **Practice features (tested because they come from the same driver and weekend)**: practice long-run slopes correlate
+  with the race slope (Spearman +0.45) but cut the held-out error by only 0.0005 s/lap (90% interval −0.0007 to +0.0018),
+  as the circuit effect already carries that information. Practice pace vs Medium has **no** relationship with the race
+  offset (Spearman −0.07 and +0.08) and made held-out errors slightly worse.
+
+**Finding: the per-race compound offsets are unreliable.** Median Soft/Hard offset vs Medium: race fits +0.02 s; practice
+push laps (same driver, same session) −0.75 s. Compound choice follows race phase, fuel and strategy, so the race fit
+absorbs those effects. The same offsets sit in the simulator's lap-time model (§8), and the backtest (§8) doesn't catch
+this because it only replays strategies that were really run.
+
+**Consequence in the simulator**: every simulated plan and optimiser result carries `offset_dependence`: the part of its
+time difference to the real strategy that comes from the fitted offsets (point estimate, computed by zeroing them). It is
+flagged when that part is ≥ 1 s and ≥ 50% of the difference (both thresholds are ASSUMPTIONS, `OFFSET_WARN_S` and
+`OFFSET_WARN_SHARE`). The UI shows it with the other caveats.

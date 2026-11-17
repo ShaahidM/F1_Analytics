@@ -271,9 +271,9 @@ function SimResults({ result, slots }: { result: SimResult; slots: Slot[] }) {
               <div className="text-ink-2">
                 {dist.map(([p, v]) => `P${p} ${Math.round(v * 100)}%`).join(" · ")} <span className="text-ink-3">(really P{r.position.actual})</span>
               </div>
-              {[...r.warnings, ...r.extrapolation].length > 0 && (
+              {[...r.warnings, ...r.extrapolation, ...(r.offset_dependence.message ? [r.offset_dependence.message] : [])].length > 0 && (
                 <ul className="mt-2 space-y-1 text-[11px] text-warn">
-                  {[...r.warnings, ...r.extrapolation].map((w) => <li key={w}>⚠ {w}</li>)}
+                  {[...r.warnings, ...r.extrapolation, ...(r.offset_dependence.message ? [r.offset_dependence.message] : [])].map((w) => <li key={w}>⚠ {w}</li>)}
                 </ul>
               )}
             </div>
@@ -344,14 +344,17 @@ function OptTable({ result, onLoad }: { result: OptResult; onLoad: (p: SimStint[
               </td>
               <td className="px-2 py-1 font-mono text-ink-3">{fmtRange(main)}</td>
               {result.mode === "traffic" && <td className="px-2 py-1 font-mono text-ink-3">{fmtDelta(p.delta_vs_actual_strategy.median)}</td>}
-              <td className="px-2 py-1 text-warn" title={p.extrapolation.join("\n")}>{p.extrapolation.length ? `⚠ ${p.extrapolation.length} extrapolation${p.extrapolation.length > 1 ? "s" : ""}` : ""}</td>
+              <td className="px-2 py-1 text-warn" title={[...p.extrapolation, ...(p.offset_dependence.message ? [p.offset_dependence.message] : [])].join("\n")}>
+                {p.extrapolation.length ? `⚠ ${p.extrapolation.length} extrapolation${p.extrapolation.length > 1 ? "s" : ""}` : ""}
+                {p.offset_dependence.flagged ? <div>⚠ driven by compound offsets ({p.offset_dependence.effect_s >= 0 ? "+" : ""}{p.offset_dependence.effect_s.toFixed(1)} s)</div> : null}
+              </td>
               <td className="px-2 py-1"><button className="btn py-0.5" onClick={() => onLoad(p.stints)}>Load into builder</button></td>
             </tr>
             );
           })}
         </tbody>
       </table>
-      <p className="mt-1 text-[10px] text-ink-3">Hover a caveat to see which stints run beyond the tyre ages seen in this race.</p>
+      <p className="mt-1 text-[10px] text-ink-3">Hover a caveat for details: stints beyond the tyre ages seen in this race, or plans that win mostly through fitted compound offsets (unvalidated).</p>
     </div>
   );
 }

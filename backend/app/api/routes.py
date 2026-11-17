@@ -347,6 +347,7 @@ def whatif_simulate(session_id: str, body: SimulateIn):
     for d, r in res["drivers"].items():  # validation messages and the clean-air figure come from Stage A
         c = clean["drivers"][d]
         r.update(warnings=c["warnings"], extrapolation=c["extrapolation"], laps=c["laps"],
+                 offset_dependence=c["offset_dependence"],
                  clean_air_delta=c["delta_vs_actual_strategy"])
     return {**res, "mode": "traffic"}
 
