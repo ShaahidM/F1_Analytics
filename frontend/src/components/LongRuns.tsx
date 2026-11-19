@@ -41,11 +41,11 @@ export function LongRuns({ sessionId, slots, includeFlagged }: { sessionId: stri
       <h3 className="flex flex-wrap items-center gap-2 px-2 pt-2 text-xs font-semibold">
         Long runs, whole field <Badge tier="C" note="Runs of 5+ laps within ±2.5% of the run's median pace on one tyre set, with at least 3 consecutive laps" />
       </h3>
-      <p className="px-2 text-[10px] text-ink-3">
+      <p className="px-2 text-[11px] text-ink-3">
         Ordered by median lap time within each compound. Fuel loads and engine modes are unknown and differ between teams, so
         this order is not a race-pace ranking; the trend (s per lap) is the more comparable number.
       </p>
-      <table className="mt-1 w-full text-[11px]">
+      <table className="mt-1 w-full text-xs">
         <thead className="text-left text-ink-3">
           <tr className="border-b border-border">
             <th className="px-2 py-1 font-normal">Driver</th>

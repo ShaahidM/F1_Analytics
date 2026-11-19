@@ -7,13 +7,16 @@ import { useEffect, useRef } from "react";
 const BASE_LAYOUT: Partial<Layout> = {
   paper_bgcolor: "#1a1a19",
   plot_bgcolor: "#1a1a19",
-  font: { color: "#c3c2b7", size: 11, family: "ui-monospace, monospace" },
+  font: { color: "#c3c2b7", size: 12, family: "system-ui, sans-serif" },
   margin: { l: 56, r: 12, t: 28, b: 40 },
   xaxis: { gridcolor: "#2b2b28", zerolinecolor: "#33332f", linecolor: "#33332f" },
   yaxis: { gridcolor: "#2b2b28", zerolinecolor: "#33332f", linecolor: "#33332f" },
-  legend: { orientation: "h", y: -0.22, font: { size: 10 } },
-  hoverlabel: { bgcolor: "#232321", bordercolor: "#33332f", font: { color: "#f0efec" } },
+  legend: { orientation: "h", y: -0.22, font: { size: 12 } },
+  hoverlabel: { bgcolor: "#232321", bordercolor: "#33332f", font: { color: "#f0efec", size: 12 } },
 };
+
+// Charts use the page's own sans font (Geist, loaded by next/font under a generated family name).
+const pageFont = () => getComputedStyle(document.body).fontFamily || "system-ui, sans-serif";
 
 export function Plot({ data, layout, height = 320 }: { data: Data[]; layout?: Partial<Layout>; height?: number }) {
   const el = useRef<HTMLDivElement>(null);
@@ -26,6 +29,8 @@ export function Plot({ data, layout, height = 320 }: { data: Data[]; layout?: Pa
       const merged: Partial<Layout> = {
         ...BASE_LAYOUT,
         ...layout,
+        font: { ...BASE_LAYOUT.font, family: pageFont(), ...layout?.font },
+        legend: { ...BASE_LAYOUT.legend, ...layout?.legend, font: { ...BASE_LAYOUT.legend?.font, ...layout?.legend?.font } },
         height,
         xaxis: { ...BASE_LAYOUT.xaxis, ...layout?.xaxis },
         yaxis: { ...BASE_LAYOUT.yaxis, ...layout?.yaxis },

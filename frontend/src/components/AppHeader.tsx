@@ -14,7 +14,7 @@ export function AppHeader() {
         <span aria-hidden className="h-6 w-1.5 rounded-full bg-brand" />
         <div>
           <div className="text-sm font-semibold tracking-tight">F1 Telemetry Lab</div>
-          <div className="text-[10px] text-ink-3">Driver comparison &amp; tyre-management analysis</div>
+          <div className="text-[11px] text-ink-3">Driver comparison &amp; tyre-management analysis</div>
         </div>
       </div>
       <Segmented label="Analysis mode" value={view} onChange={setView}

@@ -104,7 +104,7 @@ export function PreservationView({ sessionId, slots }: { sessionId: string; slot
         <h3 className="flex items-center gap-2 px-2 pt-2 text-xs font-semibold">
           Behaviour pattern by corner zone and stint <Badge tier="I" note="Rule-based label from the indicator trends; it describes what the data is consistent with, never intent or tyre state" />
         </h3>
-        <table className="w-full text-[11px]">
+        <table className="w-full text-xs">
           <thead className="text-left text-ink-3">
             <tr className="border-b border-border">
               <th className="px-2 py-1 font-normal">Zone</th>
@@ -130,8 +130,8 @@ export function PreservationView({ sessionId, slots }: { sessionId: string; slot
                     <td key={`${c.s.slot}${c.stint}`} className="px-2 py-1">
                       <div className="border-l-2 pl-2" style={{ borderColor: p.edge }}>
                         <div className="text-ink">{p.symbol} {p.text}</div>
-                        {t?.evidence.map((e) => <div key={e} className="text-[10px] text-ink-3">{e}</div>)}
-                        {t && <div className="text-[10px] text-ink-3">n = {t.n_laps} laps, ages span {t.tyre_age_span}</div>}
+                        {t?.evidence.map((e) => <div key={e} className="text-[11px] text-ink-3">{e}</div>)}
+                        {t && <div className="text-[11px] text-ink-3">n = {t.n_laps} laps, ages span {t.tyre_age_span}</div>}
                       </div>
                     </td>
                   );
@@ -157,7 +157,7 @@ export function PreservationView({ sessionId, slots }: { sessionId: string; slot
           <Plot height={340} data={scatter}
             layout={{ xaxis: { title: { text: "Tyre age (laps on set)" } }, yaxis: { title: { text: `${ind[indicator]?.label} (${ind[indicator]?.unit})` } },
               margin: { l: 60, r: 12, t: 16, b: 90 }, legend: { orientation: "h", y: -0.3 } }} />
-          <p className="px-1 text-[10px] text-ink-3">
+          <p className="px-1 text-[11px] text-ink-3">
             An increase means {ind[indicator]?.increase_means}. Fuel burn alone makes later laps lighter, so brake points
             tend to move later and speeds rise as a stint goes on; that has to be weighed against any tyre effect.
           </p>
@@ -169,7 +169,7 @@ export function PreservationView({ sessionId, slots }: { sessionId: string; slot
           <Plot height={340} data={timeBars}
             layout={{ barmode: "group", yaxis: { title: { text: "Δ zone time per 10 laps (s)" }, zeroline: true },
               margin: { l: 60, r: 12, t: 16, b: 90 }, legend: { orientation: "h", y: -0.3 } }} />
-          <p className="px-1 text-[10px] text-ink-3">
+          <p className="px-1 text-[11px] text-ink-3">
             Positive = the zone gets slower as tyres age (fuel burn alone would make it faster). Whiskers are 90% CIs.
           </p>
         </section>
@@ -179,7 +179,7 @@ export function PreservationView({ sessionId, slots }: { sessionId: string; slot
         <h3 className="flex items-center gap-2 px-2 pt-2 text-xs font-semibold">
           {ind[indicator]?.label}: change per 10 laps, all zones <Badge tier="E" />
         </h3>
-        <table className="w-full text-[11px]">
+        <table className="w-full text-xs">
           <thead className="text-left text-ink-3">
             <tr className="border-b border-border">
               <th className="px-2 py-1 font-normal">Zone</th>
@@ -205,7 +205,7 @@ export function PreservationView({ sessionId, slots }: { sessionId: string; slot
             ))}
           </tbody>
         </table>
-        <p className="px-2 py-1 text-[10px] text-ink-3">
+        <p className="px-2 py-1 text-[11px] text-ink-3">
           ● = counts as a change (CI excludes zero and the change over the stint is at least {ind[indicator]?.min_change}{" "}
           {ind[indicator]?.unit}). Grey values are within noise.
         </p>
@@ -213,7 +213,7 @@ export function PreservationView({ sessionId, slots }: { sessionId: string; slot
 
       <section className="overflow-x-auto card">
         <h3 className="flex items-center gap-2 px-2 pt-2 text-xs font-semibold">Whole-lap behaviour trends (per 10 laps) <Badge tier="E" /></h3>
-        <table className="w-full text-[11px]">
+        <table className="w-full text-xs">
           <thead className="text-left text-ink-3">
             <tr className="border-b border-border">
               <th className="px-2 py-1 font-normal">Driver · stint</th>
@@ -244,7 +244,7 @@ export function PreservationView({ sessionId, slots }: { sessionId: string; slot
         </table>
       </section>
 
-      <section className="card px-3 py-2 text-[11px] text-ink-2">
+      <section className="card px-3 py-2 text-xs text-ink-2">
         <div className="mb-1 font-semibold text-ink">Alternative explanations to weigh before reading any pattern as tyre management</div>
         <ul className="list-disc pl-5">
           {q.data.confounders.map((c) => <li key={c}>{c}</li>)}

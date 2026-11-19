@@ -52,7 +52,7 @@ export function ModelBPanel({ sessionId, slots, includeFlagged }: { sessionId: s
         <Plot height={Math.max(180, rows.length * 34 + 60)} data={data}
           layout={{ xaxis: { title: { text: "Lap-time cost per lap of tyre age (s/lap)" }, zeroline: true },
             yaxis: { autorange: "reversed", automargin: true }, margin: { l: 110, r: 12, t: 10, b: 44 } }} />
-        <div className="flex flex-col gap-2 text-[11px] text-ink-2">
+        <div className="flex flex-col gap-2 text-xs text-ink-2">
           <table className="w-full">
             <tbody className="font-mono">
               <tr><td className="pr-2 text-ink-3">Fuel burn + track evolution (γ)</td><td>{fmtCoef(m.lap_effect)} s/lap</td></tr>

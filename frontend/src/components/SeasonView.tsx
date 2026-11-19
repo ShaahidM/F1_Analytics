@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { Data } from "plotly.js-dist-min";
 import { useMemo, useState } from "react";
 import { api, type RaceSummary, type SeasonAggregate } from "@/lib/api";
-import { DRIVER } from "@/lib/colors";
+import { COMPOUND, DRIVER } from "@/lib/colors";
 import { useStore } from "@/lib/store";
 import { Badge } from "./Badge";
 import { CompoundChip } from "./ComparisonPanel";
@@ -175,11 +175,11 @@ function Scorecard({ agg, a, b, counted, faster }: {
               <span><span className="text-xl font-semibold tabular-nums" style={{ color: DRIVER.b }}>{faster.b}</span> {b}</span>
               <span className="text-ink-3">{counted - faster.a - faster.b} too close to call</span>
             </div>
-            <p className="mt-1 text-[11px] text-ink-3">&ldquo;Clear&rdquo; = the race&apos;s 90% interval excludes zero.</p>
+            <p className="mt-1 text-xs text-ink-3">&ldquo;Clear&rdquo; = the race&apos;s 90% interval excludes zero.</p>
           </div>
         </div>
         <div className="card overflow-x-auto">
-          <table className="w-full text-[11px]">
+          <table className="w-full text-xs">
             <thead className="text-left text-ink-3">
               <tr className="border-b border-border">
                 <th className="px-3 py-1.5 font-normal">Metric</th>
@@ -289,7 +289,7 @@ function StyleChart({ races, a, b }: { races: RaceSummary[]; a: string; b: strin
             <Badge tier="C" />
           </span>
         } />
-      <Plot height={280} data={data} layout={{ yaxis: { title: { text: m.unit } }, margin: { l: 60, r: 12, t: 8, b: 90 },
+      <Plot height={280} data={data} layout={{ yaxis: { title: { text: `${m.label} (${m.unit})` } }, margin: { l: 64, r: 12, t: 8, b: 90 },
         xaxis: { tickangle: -40 }, legend: { orientation: "h", y: -0.4 } }} />
     </section>
   );
@@ -297,8 +297,20 @@ function StyleChart({ races, a, b }: { races: RaceSummary[]; a: string; b: strin
 
 function RaceTable({ races, a, b, onOpen }: { races: RaceSummary[]; a: string; b: string; onOpen: (r: RaceSummary) => void }) {
   const sorted = [...races].sort((x, y) => (x.round ?? 0) - (y.round ?? 0));
-  const tyre = (r: RaceSummary, tag: "a" | "b") =>
-    Object.entries(r.model?.[tag] ?? {}).map(([c, v]) => `${c[0]} ${v.estimate >= 0 ? "+" : ""}${v.estimate.toFixed(3)}`).join(" · ") || "—";
+  const tyre = (r: RaceSummary, tag: "a" | "b") => {
+    const rows = Object.entries(r.model?.[tag] ?? {});
+    if (!rows.length) return "—";
+    return (
+      <span className="flex flex-wrap gap-x-3">
+        {rows.map(([c, v]) => (
+          <span key={c} className="inline-flex items-center gap-1" title={c}>
+            <span aria-hidden className="inline-block h-2 w-2 rounded-full" style={{ background: COMPOUND[c] ?? "#8a8984" }} />
+            {c[0]} {v.estimate >= 0 ? "+" : ""}{v.estimate.toFixed(3)}
+          </span>
+        ))}
+      </span>
+    );
+  };
   const pat = (r: RaceSummary, tag: "a" | "b") => {
     const p = r.patterns?.[tag];
     return p ? `${p.consistent_with_management ?? 0} / ${p.consistent_with_grip_loss ?? 0}` : "—";
@@ -308,18 +320,18 @@ function RaceTable({ races, a, b, onOpen }: { races: RaceSummary[]; a: string; b
       <div className="p-3 pb-1">
         <SectionHeader title="Race by race" description="Open any race to explore it in the session view with both drivers selected." />
       </div>
-      <table className="w-full text-[11px]">
+      <table className="w-full text-xs">
         <thead className="text-left text-ink-3">
           <tr className="border-b border-border">
             <th className="px-3 py-1.5 font-normal">Round</th>
             <th className="px-3 py-1.5 font-normal">Conditions</th>
             <th className="px-3 py-1.5 font-normal">Finish {a} / {b}</th>
-            <th className="px-3 py-1.5 font-normal">Stops</th>
-            <th className="px-3 py-1.5 font-normal">Pace gap {b} − {a}</th>
-            <th className="px-3 py-1.5 font-normal">Tyre cost {a} (s/lap)</th>
-            <th className="px-3 py-1.5 font-normal">Tyre cost {b}</th>
-            <th className="px-3 py-1.5 font-normal" title="Corner-zone patterns labelled management / grip loss">Mgmt / grip {a}</th>
-            <th className="px-3 py-1.5 font-normal">Mgmt / grip {b}</th>
+            <th className="px-3 py-1.5 font-normal">Stops {a} / {b}</th>
+            <th className="px-3 py-1.5 font-normal" title={`Median per-lap gap; positive = ${a} faster`}>Pace gap (faster driver)</th>
+            <th className="px-3 py-1.5 font-normal" title="Lap time lost per lap of tyre age, per compound">Tyre-wear cost {a} (s/lap)</th>
+            <th className="px-3 py-1.5 font-normal">Tyre-wear cost {b} (s/lap)</th>
+            <th className="px-3 py-1.5 font-normal" title="Corner zones whose behaviour pattern looks like tyre management / like grip loss">Corners: managing / losing grip {a}</th>
+            <th className="px-3 py-1.5 font-normal">Corners: managing / losing grip {b}</th>
             <th className="px-3 py-1.5 font-normal"></th>
           </tr>
         </thead>
@@ -334,20 +346,27 @@ function RaceTable({ races, a, b, onOpen }: { races: RaceSummary[]; a: string; b
                   <td className={`px-3 py-1.5 ${r.conditions === "dry" ? "text-ink-2" : "text-warn"}`}>{COND_LABEL[r.conditions ?? "unknown"]}</td>
                   <td className="px-3 py-1.5 font-mono">{r.finish?.a ?? "—"} / {r.finish?.b ?? "—"}</td>
                   <td className="px-3 py-1.5 font-mono">{r.stops?.a} / {r.stops?.b}</td>
-                  <td className="px-3 py-1.5 font-mono">{r.pace_gap ? `${r.pace_gap.median_s >= 0 ? "+" : ""}${r.pace_gap.median_s.toFixed(3)} s` : "—"}</td>
+                  <td className="px-3 py-1.5 font-mono">
+                    {r.pace_gap ? (
+                      <span style={{ color: r.pace_gap.median_s >= 0 ? DRIVER.a : DRIVER.b }}>
+                        {Math.abs(r.pace_gap.median_s).toFixed(3)} s {r.pace_gap.median_s >= 0 ? a : b}
+                      </span>
+                    ) : "—"}
+                  </td>
                   <td className="px-3 py-1.5 font-mono">{tyre(r, "a")}</td>
                   <td className="px-3 py-1.5 font-mono">{tyre(r, "b")}</td>
                   <td className="px-3 py-1.5 font-mono">{pat(r, "a")}</td>
                   <td className="px-3 py-1.5 font-mono">{pat(r, "b")}</td>
-                  <td className="px-3 py-1.5"><button className="btn py-0.5" onClick={() => onOpen(r)}>Open race</button></td>
+                  <td className="px-3 py-1.5"><button className="btn whitespace-nowrap py-0.5" onClick={() => onOpen(r)}>Open race</button></td>
                 </>
               )}
             </tr>
           ))}
         </tbody>
       </table>
-      <p className="px-3 py-2 text-[10px] text-ink-3">
-        Finishing positions are line-crossing order (post-race penalties not applied). Positions are blank for retirements.
+      <p className="px-3 py-2 text-[11px] text-ink-3">
+        Tyre letters: S soft, M medium, H hard, I intermediate, W wet. Finishing positions are line-crossing order (post-race
+        penalties not applied) and blank for retirements.
       </p>
     </section>
   );

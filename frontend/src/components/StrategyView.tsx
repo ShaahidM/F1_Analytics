@@ -54,9 +54,9 @@ export function StrategyView({ sessionId, slots, drivers }: { sessionId: string;
         <h3 className="flex items-center gap-2 px-1 text-xs font-semibold">Tyre strategy, whole field (finishing order) <Badge tier="M" note="Stints and compounds from the timing feed; 2019–22 stints are inferred from pit stops" /></h3>
         <Plot height={Math.max(260, order.length * 22 + 60)} data={timeline}
           layout={{ barmode: "overlay", xaxis: { title: { text: "Lap" }, range: [0.5, st.total_laps + 0.5] },
-            yaxis: { categoryorder: "array", categoryarray: [...order].reverse(), automargin: true, tickfont: { size: 10 } },
+            yaxis: { categoryorder: "array", categoryarray: [...order].reverse(), automargin: true, tickfont: { size: 11 } },
             margin: { l: 56, r: 12, t: 8, b: 40 } }} />
-        <p className="px-1 text-[10px] text-ink-3">Bars are coloured by compound (S/M/H labelled inside); ▶ marks the two selected drivers.</p>
+        <p className="px-1 text-[11px] text-ink-3">Bars are coloured by compound (S/M/H labelled inside); ▶ marks the two selected drivers.</p>
       </section>
 
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
@@ -66,7 +66,7 @@ export function StrategyView({ sessionId, slots, drivers }: { sessionId: string;
             line: { color: "#c3c2b7", width: 1.5 }, marker: { size: 3 }, hovertemplate: `L%{x}: ${b.label} %{y:+.2f} s vs ${a.label}<extra></extra>` }]}
             layout={{ xaxis: { title: { text: "Lap" } }, yaxis: { title: { text: `${b.label} behind ${a.label} (s)` }, zeroline: true },
               shapes: [...(pitShapes ?? []), ...(cycleShapes ?? [])], margin: { l: 56, r: 12, t: 8, b: 40 } }} />
-          <p className="px-1 text-[10px] text-ink-3">Positive = {b.label} behind. Dotted lines = pit stops ({a.label} blue, {b.label} orange); shaded = paired pit cycles.</p>
+          <p className="px-1 text-[11px] text-ink-3">Positive = {b.label} behind. Dotted lines = pit stops ({a.label} blue, {b.label} orange); shaded = paired pit cycles.</p>
         </section>
         <section className="card p-2">
           <h3 className="flex items-center gap-2 px-1 text-xs font-semibold">Running position <Badge tier="C" note="Rank of line-crossing time among cars completing each lap" /></h3>
@@ -86,7 +86,7 @@ export function StrategyView({ sessionId, slots, drivers }: { sessionId: string;
             </span>
           )}
         </h3>
-        <table className="w-full text-[11px]">
+        <table className="w-full text-xs">
           <thead className="text-left text-ink-3">
             <tr className="border-b border-border">
               <th className="px-2 py-1 font-normal">Driver · lap</th>
@@ -128,7 +128,7 @@ export function StrategyView({ sessionId, slots, drivers }: { sessionId: string;
         {st.cycles.length === 0 ? (
           <p className="px-2 py-2 text-xs text-ink-3">The two drivers never stopped within 6 laps of each other, so there is no direct undercut/overcut to measure.</p>
         ) : (
-          <table className="w-full text-[11px]">
+          <table className="w-full text-xs">
             <thead className="text-left text-ink-3">
               <tr className="border-b border-border">
                 <th className="px-2 py-1 font-normal">First stopper</th>
@@ -155,7 +155,7 @@ export function StrategyView({ sessionId, slots, drivers }: { sessionId: string;
                     <td className="px-2 py-1 font-mono">{sgn(c.on_track_diff_s)} s</td>
                     <td className="px-2 py-1">
                       {c.outcome}
-                      {c.neutralised && <div className="text-[10px] text-warn">SC/VSC/red during the cycle: not a clean comparison</div>}
+                      {c.neutralised && <div className="text-[11px] text-warn">SC/VSC/red during the cycle: not a clean comparison</div>}
                     </td>
                   </tr>
                 );
@@ -163,7 +163,7 @@ export function StrategyView({ sessionId, slots, drivers }: { sessionId: string;
             </tbody>
           </table>
         )}
-        <p className="px-2 py-1 text-[10px] text-ink-3">
+        <p className="px-2 py-1 text-[11px] text-ink-3">
           Gap = first stopper&apos;s time behind the second stopper (positive = behind). &quot;From on-track laps&quot; mixes the
           fresh-tyre effect with traffic and the second stopper&apos;s old-tyre pace; it is not a pure tyre measurement.
         </p>
@@ -204,7 +204,7 @@ function CrossCompound({ model, isError, error, slots }: {
         <Plot height={340} data={data}
           layout={{ xaxis: { title: { text: "Tyre age (laps on set)" } }, yaxis: { title: { text: "Predicted lap time (s)" } },
             margin: { l: 60, r: 12, t: 8, b: 100 }, legend: { orientation: "h", y: -0.3 } }} />
-        <div className="text-[11px] text-ink-2">
+        <div className="text-xs text-ink-2">
           <p className="text-ink-3">
             Predicted lap time on each compound as the tyre ages, for each driver, at a common reference point (lap{" "}
             {model.reference.lap_number}{model.reference.track_temp !== null ? `, track ${model.reference.track_temp.toFixed(1)} °C` : ""}), so a

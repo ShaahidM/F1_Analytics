@@ -62,7 +62,7 @@ export function CornerTable({ sessionId, a, b, zones, labels }: {
 
   return (
     <div className="overflow-x-auto card">
-      <table className="w-full text-[11px]">
+      <table className="w-full text-xs">
         <thead className="text-ink-3">
           <tr className="border-b border-border">
             <th className="px-2 py-1 text-left font-normal">Zone</th>
@@ -72,7 +72,7 @@ export function CornerTable({ sessionId, a, b, zones, labels }: {
             {BRAKING_COLS.map((c) => (
               <th key={c.key} className="px-2 py-1 text-left font-normal" title={defs[c.key]?.note}>
                 <div>{c.label}</div>
-                <div className="flex items-center gap-1 text-[10px]">
+                <div className="flex items-center gap-1 text-[11px]">
                   {defs[c.key]?.unit} <Badge tier={defs[c.key]?.tier ?? "C"} note={defs[c.key]?.note} />
                 </div>
               </th>
@@ -97,7 +97,7 @@ export function CornerTable({ sessionId, a, b, zones, labels }: {
                     className="font-mono font-semibold text-ink hover:underline" title="Zoom map and charts to this zone">
                     {z.label}
                   </button>
-                  <div className="text-[10px] text-ink-3">{z.kind === "flat" ? "flat-out" : `${Math.round(z.apex_s)} m`}</div>
+                  <div className="text-[11px] text-ink-3">{z.kind === "flat" ? "flat-out" : `${Math.round(z.apex_s)} m`}</div>
                 </td>
                 <td className="px-2 py-1">
                   <Pair a={ta} b={tb} digits={3} />
@@ -121,7 +121,7 @@ export function CornerTable({ sessionId, a, b, zones, labels }: {
                         <Pair a={ra[c.key]} b={rb[c.key]} digits={c.digits}
                           res={c.key === "brake_onset_before_apex_m" ? [ra.brake_onset_resolution_m ?? undefined, rb.brake_onset_resolution_m ?? undefined] : undefined} />
                         {c.key === "brake_onset_before_apex_m" && bpDiff !== null && (
-                          <div className="mt-0.5 whitespace-nowrap text-[10px] text-ink-3">
+                          <div className="mt-0.5 whitespace-nowrap text-[11px] text-ink-3">
                             {Math.abs(bpDiff) <= resSum ? "≈ within resolution" : `${bpDiff > 0 ? labels.b : labels.a} ${Math.abs(bpDiff).toFixed(0)} m earlier`}
                           </div>
                         )}
@@ -132,7 +132,7 @@ export function CornerTable({ sessionId, a, b, zones, labels }: {
           })}
         </tbody>
       </table>
-      <p className="px-2 py-1 text-[10px] text-ink-3">
+      <p className="px-2 py-1 text-[11px] text-ink-3">
         Zones are defined once on the session reference lap and shared by both laps, so time-in-zone compares identical
         stretches of track. Distances after the apex (throttle) and before it (brake point) are relative to the reference
         apex. Click a zone to zoom the map and charts.

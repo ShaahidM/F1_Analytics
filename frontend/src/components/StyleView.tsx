@@ -81,7 +81,7 @@ export function StyleView({ sessionId, slots }: { sessionId: string; slots: Slot
         <span className="text-ink-3">Each dot is one clean lap; the bar marks the median.</span>
       </div>
 
-      <p className="text-[11px] text-ink-3">
+      <p className="text-xs text-ink-3">
         Style differences reflect the car and set-up as well as the driver; teammates give the fairest comparison. Values
         come from ~4 Hz telemetry and braking is on/off only (no pressure).
       </p>
@@ -103,11 +103,11 @@ export function StyleView({ sessionId, slots }: { sessionId: string; slots: Slot
               const meds = slots.map((s) => median(rowsOf(s).map((r) => r[k]).filter((v): v is number => v !== null && v !== undefined)));
               return (
                 <div key={k} className="rounded border border-border/60 p-1">
-                  <div className="flex items-center justify-between gap-2 px-1 text-[11px]">
+                  <div className="flex items-center justify-between gap-2 px-1 text-xs">
                     <span className="font-semibold text-ink">{LABELS[k]} <span className="font-normal text-ink-3">{defs[k]?.unit}</span></span>
                     <Badge tier={defs[k]?.tier ?? "C"} note={defs[k]?.note} />
                   </div>
-                  <div className="flex gap-3 px-1 font-mono text-[11px] text-ink-2">
+                  <div className="flex gap-3 px-1 font-mono text-xs text-ink-2">
                     {slots.map((s, i) => (
                       <span key={s.slot} className="flex items-center gap-1">
                         <span className="inline-block h-2 w-2 rounded-sm" style={{ background: DRIVER[s.slot] }} />
@@ -153,7 +153,7 @@ function LineSection({ sessionId, slots, includeFlagged }: { sessionId: string; 
         Line length through each corner (experimental)
         <Badge tier="E" note="Distance driven from wheel speed minus track distance, averaged over all clean laps; 95% CI" />
       </h3>
-      <p className="px-1 text-[11px] text-ink-3">
+      <p className="px-1 text-xs text-ink-3">
         Public positions are snapped to one track line, so the line itself can&apos;t be drawn. Wheel speed still measures how
         far each car really travelled: extra metres through a corner mean <b>a longer line or more tyre slip</b>, and the two
         can&apos;t be separated. Per-lap noise is ~5 m, so only session averages are shown. Coloured = the difference is at
@@ -163,7 +163,7 @@ function LineSection({ sessionId, slots, includeFlagged }: { sessionId: string; 
         <Plot height={Math.max(180, rows.length * 30 + 60)} data={chart}
           layout={{ showlegend: false, xaxis: { title: { text: `${a.label} − ${b.label} extra distance (m)` }, zeroline: true },
             yaxis: { autorange: "reversed", automargin: true }, margin: { l: 70, r: 12, t: 8, b: 44 } }} />
-        <table className="w-full text-[11px]">
+        <table className="w-full text-xs">
           <thead className="text-left text-ink-3">
             <tr className="border-b border-border">
               <th className="px-2 py-1 font-normal">Zone</th>

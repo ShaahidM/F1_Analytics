@@ -1,6 +1,9 @@
 // Typed client for the FastAPI backend (see backend/app/api/routes.py).
 
-export const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
+// Empty by default: requests go to the page's own origin and next.config.ts proxies /api to the backend, so a
+// forwarded port (one origin) is enough. Set NEXT_PUBLIC_API_BASE to call a backend directly instead.
+export const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "";
+const base = () => API_BASE || window.location.origin;
 
 export type Capabilities = {
   lap_times: boolean;
@@ -425,7 +428,7 @@ export class ApiError extends Error {
 }
 
 async function get<T>(path: string, params?: Record<string, string | number | undefined | null>): Promise<T> {
-  const url = new URL(path, API_BASE);
+  const url = new URL(path, base());
   for (const [k, v] of Object.entries(params ?? {})) {
     if (v !== undefined && v !== null && v !== "") url.searchParams.set(k, String(v));
   }
@@ -441,7 +444,7 @@ async function get<T>(path: string, params?: Record<string, string | number | un
 }
 
 async function post<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(new URL(path, API_BASE), {
+  const res = await fetch(new URL(path, base()), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),

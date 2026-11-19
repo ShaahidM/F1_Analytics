@@ -110,17 +110,21 @@ test("strategy simulator: Piastri on Norris's one-stop (Hungary 2025)", async ({
   await openSession(page, "2025", /Hungar/, /^Race/, /^NOR/, /^PIA/);
   await page.getByRole("button", { name: "Strategy", exact: true }).click();
   await expect(page.getByText("What-if strategy simulator")).toBeVisible();
-  await expect(page.getByText(/Model accuracy here/)).toBeVisible();
-  await page.getByRole("button", { name: "NOR's strategy" }).click();
-  await page.getByRole("button", { name: "Simulate", exact: true }).click();
-  await expect(page.getByText("Race time vs their real strategy").first()).toBeVisible();
-  await expect(page.getByText(/90% range/).first()).toBeVisible();
-  await expect(page.getByText(/Chance NOR finishes ahead of PIA/)).toBeVisible();
+  await expect(page.getByText(/Typical model error here/)).toBeVisible();
+  await page.getByRole("button", { name: "Copy NOR's" }).click();
+  await expect(page.getByText("Modified")).toBeVisible();
+  await page.getByRole("button", { name: "Run simulation" }).click();
+  await expect(page.getByText("Finish time vs the real race").first()).toBeVisible();
+  await expect(page.getByText(/90% of simulated races/).first()).toBeVisible();
+  await expect(page.getByText("Who finishes ahead")).toBeVisible();
   // Traffic & overtaking is on by default: the clean-air figure is shown alongside.
-  await expect(page.getByText(/with traffic/).first()).toBeVisible();
-  await expect(page.getByText(/Clean air would be/).first()).toBeVisible();
+  await expect(page.getByText("With traffic and overtaking")).toBeVisible();
+  await expect(page.getByText("In clean air").first()).toBeVisible();
+  // Editing a plan after a run marks the results as out of date.
+  await page.getByRole("button", { name: "Real strategy" }).last().click();
+  await expect(page.getByText("These results are out of date")).toBeVisible();
   await page.getByRole("button", { name: "Find best strategies" }).click();
-  await expect(page.getByRole("button", { name: "Load into builder" }).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "Edit this plan" }).first()).toBeVisible();
   await expect(page.getByRole("columnheader", { name: "Clean air" })).toBeVisible();
   expect(errors).toEqual([]);
 });

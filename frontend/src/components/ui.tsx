@@ -39,7 +39,7 @@ export function Callout({ tone = "info", title, children }: { tone?: "info" | "w
 export function Chip({ ok, children, title }: { ok?: boolean; children: React.ReactNode; title?: string }) {
   return (
     <span title={title}
-      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] ${ok === false ? "border-border text-ink-3 line-through decoration-ink-3/60" : "border-border-strong text-ink-2"}`}>
+      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] ${ok === false ? "border-border text-ink-3 line-through decoration-ink-3/60" : "border-border-strong text-ink-2"}`}>
       {ok !== undefined && <span aria-hidden>{ok ? "✓" : "–"}</span>}
       {children}
     </span>

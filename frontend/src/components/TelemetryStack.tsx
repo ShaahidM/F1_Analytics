@@ -24,17 +24,17 @@ const CHANNELS: Channel[] = [
   { key: "speed", title: "Speed", unit: "km/h", tier: "M", height: 150, get: (t) => t.speed },
   { key: "throttle", title: "Throttle", unit: "%", tier: "M", height: 90, get: (t) => t.throttle, range: [0, 102] },
   { key: "brake", title: "Brake", unit: "on/off", tier: "M", note: "The feed reports brake as binary (0/100), not pressure",
-    height: 60, step: true, get: (t) => t.brake.map((v) => (v === null ? null : v > 0 ? 1 : 0)), range: [0, 1.05] },
+    height: 64, step: true, get: (t) => t.brake.map((v) => (v === null ? null : v > 0 ? 1 : 0)), range: [0, 1.05] },
   { key: "gear", title: "Gear", unit: "", tier: "M", height: 80, step: true, get: (t) => t.gear, range: [0, 8.5] },
   { key: "accel", title: "Longitudinal accel.", unit: "g", tier: "C",
     note: "Local quadratic fit over 7 raw samples (~1.7 s); smoothing underestimates peak braking", height: 90, get: (t) => t.accel_g },
 ];
 
 const AXIS = {
-  stroke: "#8a8984",
+  stroke: "#9b9a94",
   grid: { stroke: "#2b2b28", width: 1 },
   ticks: { stroke: "#33332f", width: 1 },
-  font: "10px ui-monospace, monospace",
+  font: "11px ui-monospace, monospace",
 };
 
 export function useWidth(ref: React.RefObject<HTMLDivElement | null>) {
@@ -72,7 +72,7 @@ export function Chart({ data, series, height, width, range, step, syncKey, corne
       },
       scales: { x: { time: false }, y: range ? { range } : {} },
       axes: [
-        { ...AXIS, size: 22, values: (_u, v) => v.map((x) => `${Math.round(x)}`) },
+        { ...AXIS, size: 26, values: (_u, v) => v.map((x) => `${Math.round(x)}`) },
         { ...AXIS, size: 44, space: 18, values: (_u, v) => v.map((x) => `${+x.toFixed(2)}`) },
       ],
       series: [
@@ -109,7 +109,7 @@ export function Chart({ data, series, height, width, range, step, syncKey, corne
             ctx.save();
             ctx.strokeStyle = "#3a3a36";
             ctx.fillStyle = "#8a8984";
-            ctx.font = `${10 * devicePixelRatio}px ui-monospace, monospace`;
+            ctx.font = `${11 * devicePixelRatio}px ui-monospace, monospace`;
             ctx.setLineDash([3 * devicePixelRatio, 3 * devicePixelRatio]);
             for (const c of corners) {
               const x = u.valToPos(c.s, "x", true);
@@ -189,7 +189,7 @@ export function TelemetryStack({ a, b, track, labels }: { a: Trace; b: Trace; tr
 
   return (
     <div ref={wrap} className="flex flex-col gap-1">
-      <div className="flex items-center justify-between text-[11px] text-ink-3">
+      <div className="flex items-center justify-between text-xs text-ink-3">
         <span>
           x = track distance (m), aligned by projection onto the reference line · drag on a chart to zoom
           {cursorS !== null && <> · cursor {Math.round(cursorS)} m{spacing ? ` · raw sample spacing here ≈ ${spacing} m` : ""}</>}
@@ -218,7 +218,7 @@ export function TelemetryStack({ a, b, track, labels }: { a: Trace; b: Trace; tr
         </ChartBlock>
       ))}
 
-      <p className="text-[11px] text-ink-3">
+      <p className="text-xs text-ink-3">
         Data quality: A {a.quality.car_samples} car / {a.quality.pos_samples} position samples (max gap {a.quality.max_pos_gap_s}s) ·
         B {b.quality.car_samples} / {b.quality.pos_samples} (max gap {b.quality.max_pos_gap_s}s).
         {(a.quality.has_gaps || b.quality.has_gaps) && <span className="text-warn"> ⚠ telemetry gaps in this lap.</span>}
@@ -233,7 +233,7 @@ export function ChartBlock({ title, unit, tier, note, readouts, children }: {
 }) {
   return (
     <div className="card px-1 pt-1">
-      <div className="flex items-center justify-between px-1 text-[11px]">
+      <div className="flex items-center justify-between px-1 text-xs">
         <span className="flex items-center gap-2">
           <span className="font-semibold text-ink">{title}</span>
           {unit && <span className="text-ink-3">{unit}</span>}

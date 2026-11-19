@@ -13,7 +13,7 @@
   --grid: #2b2b28;
   --text-primary: #f0efec;
   --text-secondary: #c3c2b7;
-  --text-muted: #8a8984;
+  --text-muted: #9b9a94;
   --driver-a: #3987e5;
   --driver-b: #d95926;
   --warn: #fab219;
@@ -109,7 +109,7 @@ input[type="range"] {
   color: var(--text-secondary);
 }
 .u-legend {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-secondary);
 }
 .u-legend .u-marker {

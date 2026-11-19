@@ -29,7 +29,7 @@ export function SessionSummary({ session, labels }: { session: SessionDetail; la
         <Chip ok={c.compounds}>Tyre compounds</Chip>
         <Chip ok={c.pit}>Pit stops</Chip>
         <Chip ok={c.race_control}>Race control</Chip>
-        <span className="ml-auto text-[10px]">{labels && <TrafficStatus sessionId={session.id} />}</span>
+        <span className="ml-auto text-[11px]">{labels && <TrafficStatus sessionId={session.id} />}</span>
       </div>
       {c.notes.map((n) => <Callout key={n} tone="warn">{n}</Callout>)}
     </div>

@@ -141,7 +141,7 @@ export function TrackMap({ track, a, b, labels }: { track: Track; a?: Trace; b?:
     ctx.fillRect(sf[0] - 2, sf[1] - 2, 4, 4);
 
     // Corner labels, offset along MultiViewer's label angle when available.
-    ctx.font = "10px ui-monospace, monospace";
+    ctx.font = "11px ui-monospace, monospace";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     for (const c of track.corners) {
@@ -275,11 +275,11 @@ export function TrackMap({ track, a, b, labels }: { track: Track; a?: Trace; b?:
 
       <div ref={wrapRef} className="relative card">
         <canvas ref={canvasRef} style={{ width: size.w, height: size.h, cursor: "crosshair" }} onMouseMove={onMove} />
-        <div className="pointer-events-none absolute left-2 top-2 text-[10px] text-ink-3">scroll to zoom · drag to pan</div>
+        <div className="pointer-events-none absolute left-2 top-2 text-[11px] text-ink-3">scroll to zoom · drag to pan</div>
       </div>
 
       <div className="flex flex-wrap items-center gap-1">
-        <span className="mr-1 text-[10px] uppercase tracking-wider text-ink-3">Zoom to corner</span>
+        <span className="mr-1 text-[11px] uppercase tracking-wider text-ink-3">Zoom to corner</span>
         <button onClick={() => zoomToCorner(null)} className="rounded border border-border px-2 py-0.5 text-xs text-ink-2 hover:text-ink">
           Full lap
         </button>
@@ -291,7 +291,7 @@ export function TrackMap({ track, a, b, labels }: { track: Track; a?: Trace; b?:
         ))}
       </div>
 
-      <p className="text-[11px] leading-snug text-ink-3">
+      <p className="text-xs leading-snug text-ink-3">
         <Badge tier="M" note="Position samples ~4 Hz" /> Traces are drawn {OFFSET_PX * 2}px apart for visibility. Public F1
         position data is map-matched to a single track line, so <b className="text-ink-2">lateral racing-line differences are
         not measurable</b>; differences shown here are <i>where along the lap</i> drivers brake, lift and accelerate.
@@ -307,7 +307,7 @@ function Legend({ colorBy, speedRange, labels }: { colorBy: ColorBy; speedRange:
   const sw = (c: string) => <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: c }} />;
   if (colorBy === "speed")
     return (
-      <div className="flex items-center gap-2 text-[11px] text-ink-2">
+      <div className="flex items-center gap-2 text-xs text-ink-2">
         <span>{Math.round(speedRange[0])} km/h</span>
         <span className="h-2 w-32 rounded-sm" style={{ background: `linear-gradient(90deg, ${SPEED_RAMP.join(",")})` }} />
         <span>{Math.round(speedRange[1])} km/h</span>
@@ -316,7 +316,7 @@ function Legend({ colorBy, speedRange, labels }: { colorBy: ColorBy; speedRange:
     );
   if (colorBy === "inputs")
     return (
-      <div className="flex items-center gap-3 text-[11px] text-ink-2">
+      <div className="flex items-center gap-3 text-xs text-ink-2">
         <span className="flex items-center gap-1">{sw(INPUTS.brake)} brake on</span>
         <span className="flex items-center gap-1">{sw(INPUTS.partial)} partial / coast</span>
         <span className="flex items-center gap-1">{sw(INPUTS.full)} throttle ≥ 98%</span>
@@ -324,7 +324,7 @@ function Legend({ colorBy, speedRange, labels }: { colorBy: ColorBy; speedRange:
     );
   if (colorBy === "faster")
     return (
-      <div className="flex items-center gap-3 text-[11px] text-ink-2">
+      <div className="flex items-center gap-3 text-xs text-ink-2">
         <span className="flex items-center gap-1">{sw(DRIVER.a)} {labels.a} faster</span>
         <span className="flex items-center gap-1">{sw(DRIVER.b)} {labels.b} faster</span>
         <span className="flex items-center gap-1">{sw(INPUTS.partial)} &lt; 10 ms</span>
@@ -332,7 +332,7 @@ function Legend({ colorBy, speedRange, labels }: { colorBy: ColorBy; speedRange:
       </div>
     );
   return (
-    <div className="flex items-center gap-3 text-[11px] text-ink-2">
+    <div className="flex items-center gap-3 text-xs text-ink-2">
       <span className="flex items-center gap-1">{sw(DRIVER.a)} A · {labels.a}</span>
       <span className="flex items-center gap-1">{sw(DRIVER.b)} B · {labels.b}</span>
     </div>

@@ -13,9 +13,9 @@ export function Badge({ tier, note }: { tier: keyof typeof TIERS; note?: string 
   return (
     <span
       title={note ? `${t.title}. ${note}` : t.title}
-      className="inline-flex h-4 cursor-help items-center rounded-sm border border-border px-1 font-mono text-[9px] text-ink-2"
+      className="inline-flex h-[18px] cursor-help items-center rounded border border-border px-1.5 align-middle text-[10px] font-medium normal-case tracking-normal text-ink-2"
     >
-      {tier} · {t.label}
+      {t.label}
     </span>
   );
 }

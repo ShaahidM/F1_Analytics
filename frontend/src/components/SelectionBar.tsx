@@ -48,7 +48,7 @@ export function SelectionBar() {
             ))}
           </select>
         </Field>
-        <label className="flex items-center gap-1 text-[10px] text-ink-3" title="2019–22: lap times and pit stops only, no telemetry, sectors or compounds">
+        <label className="flex items-center gap-1 text-[11px] text-ink-3" title="2019–22: lap times and pit stops only, no telemetry, sectors or compounds">
           <input type="checkbox" checked={showLimited} onChange={(e) => setShowLimited(e.target.checked)} />
           show limited-data seasons
         </label>

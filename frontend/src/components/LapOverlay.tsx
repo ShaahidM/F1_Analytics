@@ -109,7 +109,7 @@ export function LapOverlay({ sessionId, slots, track, initial }: {
             </select>
           </div>
         ))}
-        <span className="basis-full text-[10px] text-ink-3">
+        <span className="basis-full text-[11px] text-ink-3">
           Up to {MAX_PER_DRIVER} laps per driver. Within a driver, darker = fresher tyres, lighter = older. Δ time is relative
           to the first lap listed ({colored[0]?.name ?? "—"}).
         </span>
@@ -132,7 +132,7 @@ export function LapOverlay({ sessionId, slots, track, initial }: {
           <ChartBlock title="Brake" unit="on/off" tier="M" readouts={[]}>
             <Chart data={data.brake} series={series} height={70} width={width} range={[0, 1.05]} step syncKey="overlay" corners={track.corners} />
           </ChartBlock>
-          <div className="flex flex-wrap gap-3 text-[11px] text-ink-2">
+          <div className="flex flex-wrap gap-3 text-xs text-ink-2">
             {series.map((s) => (
               <span key={s.label} className="flex items-center gap-1"><span className="inline-block h-2 w-3 rounded-sm" style={{ background: s.color }} />{s.label}</span>
             ))}
@@ -157,7 +157,7 @@ function BrakePointTable({ track, colored, results }: {
       <h3 className="flex items-center gap-2 px-2 pt-2 text-xs font-semibold">
         Brake point, minimum speed and zone time per lap <Badge tier="C" note="Brake point = metres before the reference apex, ± half the raw sample spacing" />
       </h3>
-      <table className="w-full text-[11px]">
+      <table className="w-full text-xs">
         <thead className="text-left text-ink-3">
           <tr className="border-b border-border">
             <th className="px-2 py-1 font-normal">Zone</th>

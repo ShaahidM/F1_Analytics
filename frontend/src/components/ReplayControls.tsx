@@ -86,7 +86,7 @@ export function ReplayControls({ a, b, labels }: { a: Trace; b: Trace; labels: {
           exit replay
         </button>
       )}
-      <span className="basis-full text-[10px] text-ink-3">
+      <span className="basis-full text-[11px] text-ink-3">
         Both laps start together at the timing line; positions are interpolated between ~4 Hz samples. The gap is the
         distance between the two cars at the same elapsed lap time.
       </span>
