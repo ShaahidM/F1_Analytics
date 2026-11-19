@@ -102,9 +102,9 @@ choice, or an engineering gap. Update this file when a limitation is removed or 
 39. **`uvicorn --reload` in the OneDrive folder sometimes misses new routes**; OneDrive also syncs `node_modules`,
     `.venv` and `data/`.
 40. **Dark theme only, desktop layout only.** There are no data-table alternatives for most charts, and Plotly adds ~3.5 MB.
-41. **DuckDB is installed but unused** (Parquet is read with pandas).
-42. **Tests**: 20 offline backend unit tests and 4 end-to-end browser tests (`frontend/e2e`, Playwright on installed
-    Edge). The e2e tests use real cached data for 2024 Monza, so the first run on a fresh machine downloads it.
+41. **DuckDB is used only for the season aggregate**; everything else reads Parquet with pandas.
+42. **Tests**: 40 offline backend unit tests and 7 end-to-end browser tests (`frontend/e2e`, Playwright on installed
+    Edge). The e2e tests use real cached data (2024 Monza, 2025 Hungary), so the first run on a fresh machine downloads it.
 43. **Sessions verified**: 2024 Monza (race, qualifying, FP2), Monaco, Suzuka, Las Vegas and the Austria sprint;
     2023 Monza and Australia; 2026 São Paulo and Mexico FP2; 2019 Bahrain. On these, trace lap times are within ~0.1 s
     of official, MultiViewer corners matched, and finishing orders were correct. Suzuka's crossover caused no
